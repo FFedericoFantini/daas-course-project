@@ -4,7 +4,7 @@ MQTT_BROKER_HOST = os.environ.get("MQTT_BROKER_HOST", "localhost")
 MQTT_BROKER_PORT = int(os.environ.get("MQTT_BROKER_PORT", "1883"))
 MQTT_BROKER_WS_PORT = int(os.environ.get("MQTT_BROKER_WS_PORT", "9002"))
 
-TELEMETRY_INTERVAL_MS = int(os.environ.get("TELEMETRY_INTERVAL_MS", "500"))
+TELEMETRY_INTERVAL_MS = int(os.environ.get("TELEMETRY_INTERVAL_MS", "200"))
 CONFLICT_CHECK_INTERVAL_MS = int(os.environ.get("CONFLICT_CHECK_INTERVAL_MS", "500"))
 
 DEFAULT_CENTER_LAT = float(os.environ.get("DEFAULT_CENTER_LAT", "63.4305"))

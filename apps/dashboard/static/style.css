@@ -96,6 +96,23 @@ body {
     border-left-color: var(--warn);
 }
 
+.drone-marker {
+    background: transparent;
+    border: 0;
+}
+
+.drone-shell {
+    width: 30px;
+    height: 30px;
+    display: grid;
+    place-items: center;
+    filter: drop-shadow(0 8px 10px rgba(23, 50, 37, 0.18));
+}
+
+.drone-rotor {
+    transition: transform 140ms linear;
+}
+
 @media (max-width: 900px) {
     .layout {
         grid-template-columns: 1fr;

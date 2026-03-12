@@ -233,10 +233,11 @@ class SimulatorService:
             drone_id = f"drone-{index:03d}"
             machine = DroneFlightMachine(drone_id, self.mqtt_client)
             self.drones[drone_id] = machine
-            self.driver.add_machine(machine.stm)
-        self.driver.start(keep_active=True)
         self.mqtt_client.connect(self.broker_host, self.broker_port)
         self.mqtt_client.loop_start()
+        for machine in self.drones.values():
+            self.driver.add_machine(machine.stm)
+        self.driver.start(keep_active=True)
         logger.info("Simulator started with %s drones", self.drone_count)
 
     def stop(self):
