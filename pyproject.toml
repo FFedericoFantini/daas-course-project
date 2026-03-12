@@ -1,0 +1,13 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "daas-course-project"
+version = "0.1.0"
+description = "Modular DAAS project for TTM4115"
+requires-python = ">=3.11"
+
+[tool.setuptools.packages.find]
+where = ["packages/shared"]
+include = ["shared*"]

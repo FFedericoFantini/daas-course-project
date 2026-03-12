@@ -1,0 +1,1 @@
+"""Drone simulator component."""

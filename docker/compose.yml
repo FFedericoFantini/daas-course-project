@@ -1,0 +1,9 @@
+services:
+  mqtt-broker:
+    image: eclipse-mosquitto:2
+    container_name: daas-mqtt
+    ports:
+      - "1883:1883"
+      - "9002:9002"
+    volumes:
+      - ./mosquitto/config/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro

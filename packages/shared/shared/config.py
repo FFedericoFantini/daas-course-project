@@ -1,0 +1,25 @@
+import os
+
+MQTT_BROKER_HOST = os.environ.get("MQTT_BROKER_HOST", "localhost")
+MQTT_BROKER_PORT = int(os.environ.get("MQTT_BROKER_PORT", "1883"))
+MQTT_BROKER_WS_PORT = int(os.environ.get("MQTT_BROKER_WS_PORT", "9002"))
+
+TELEMETRY_INTERVAL_MS = int(os.environ.get("TELEMETRY_INTERVAL_MS", "500"))
+CONFLICT_CHECK_INTERVAL_MS = int(os.environ.get("CONFLICT_CHECK_INTERVAL_MS", "500"))
+
+DEFAULT_CENTER_LAT = float(os.environ.get("DEFAULT_CENTER_LAT", "63.4305"))
+DEFAULT_CENTER_LON = float(os.environ.get("DEFAULT_CENTER_LON", "10.3951"))
+DEFAULT_AIRSPACE_RADIUS_M = float(os.environ.get("DEFAULT_AIRSPACE_RADIUS_M", "4000"))
+DEFAULT_CRUISE_ALTITUDE_M = float(os.environ.get("DEFAULT_CRUISE_ALTITUDE_M", "60"))
+DEFAULT_CRUISE_SPEED_MS = float(os.environ.get("DEFAULT_CRUISE_SPEED_MS", "25"))
+DEFAULT_VERTICAL_SPEED_MS = float(os.environ.get("DEFAULT_VERTICAL_SPEED_MS", "4"))
+DEFAULT_DRONE_COUNT = int(os.environ.get("DEFAULT_DRONE_COUNT", "5"))
+
+HORIZONTAL_SEPARATION_M = float(os.environ.get("HORIZONTAL_SEPARATION_M", "120"))
+VERTICAL_SEPARATION_M = float(os.environ.get("VERTICAL_SEPARATION_M", "30"))
+CONFLICT_TIME_HORIZON_S = float(os.environ.get("CONFLICT_TIME_HORIZON_S", "12"))
+STALE_TELEMETRY_S = float(os.environ.get("STALE_TELEMETRY_S", "5"))
+
+EVASION_HEADING_CHANGE_DEG = float(os.environ.get("EVASION_HEADING_CHANGE_DEG", "45"))
+EVASION_VERTICAL_SPEED_MS = float(os.environ.get("EVASION_VERTICAL_SPEED_MS", "4"))
+EVASION_TIMEOUT_S = float(os.environ.get("EVASION_TIMEOUT_S", "20"))
