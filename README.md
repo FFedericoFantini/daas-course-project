@@ -63,98 +63,93 @@ This package must stay stable because every other component depends on it.
 
 ## Recommended Team Split
 
-This split is aligned with the final Spec V2 so each teammate can work on one component with minimal overlap.
+The repository is now organized to support a team of 6 people working from the final Spec V2.
 
-### Member 1: Airspace Core
-
-Own these files/folders:
-- [apps/airspace_core](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/apps/airspace_core)
-
-Main Spec V2 alignment:
-- `Register Drone for Monitored Flight`
-- `Resolve Airspace Conflict`
-- `Define Restricted Airspace Constraints`
-
-Main deliverables:
-- registration and activation lifecycle
-- conflict detection and advisory publication
-- zone command handling
-- airspace event generation
-- manned-aircraft and priority-rule support
-
-Do not own:
-- browser rendering
-- map visuals
-- SenseHAT input parsing
-- local drone motion logic
-
-### Member 2: Drone Simulator
+### Member 1: Airspace Core Lifecycle
 
 Own these files/folders:
-- [apps/drone_simulator](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/apps/drone_simulator)
+- [apps/airspace_core/core.py](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/apps/airspace_core/core.py)
+- [apps/airspace_core/mission.py](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/apps/airspace_core/mission.py)
 
-Main Spec V2 alignment:
-- `Register Drone for Monitored Flight`
-- `Resolve Airspace Conflict`
+Main focus:
+- registration
+- activation
+- mission assignment
+- airspace event publication for lifecycle changes
 
-Main deliverables:
-- `DroneFlightMachine` and `ManualDroneMachine`
-- mission execution and route following
+### Member 2: Airspace Core Safety Logic
+
+Own these files/folders:
+- [apps/airspace_core/rules.py](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/apps/airspace_core/rules.py)
+- [tests/test_rules.py](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/tests/test_rules.py)
+
+Main focus:
+- conflict detection
+- advisory logic
+- restricted-zone behavior
+- priority-rule behavior
+
+Note:
+- `core.py` remains primarily owned by Member 1; Member 2 only touches it when a reviewed integration change is needed.
+
+### Member 3: Drone Simulator
+
+Own these files/folders:
+- [apps/drone_simulator/fleet.py](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/apps/drone_simulator/fleet.py)
+- [apps/drone_simulator/main.py](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/apps/drone_simulator/main.py)
+
+Main focus:
+- autonomous drone state machines
 - telemetry cadence
-- advisory execution and recovery
-- manual drone behavior for Raspberry Pi input
-
-Do not own:
-- global airspace rules
-- dashboard state aggregation
-- zone validation policy
-
-### Member 3: Dashboard
-
-Own these files/folders:
-- [apps/dashboard](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/apps/dashboard)
-
-Main Spec V2 alignment:
-- `Monitor Active Airspace`
-- `Define Restricted Airspace Constraints`
-
-Main deliverables:
-- live airspace map
-- event log and status panels
-- zone visualization
-- zone-management UI or API client flow
-- browser-side smoothing and operator visibility
-
-Do not own:
-- conflict logic
-- mission activation logic
-- drone control routing
+- mission progression
+- advisory execution
 
 ### Member 4: Control Gateway / Raspberry Pi
 
 Own these files/folders:
-- [apps/control_gateway](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/apps/control_gateway)
+- [apps/control_gateway/main.py](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/apps/control_gateway/main.py)
 
-Main Spec V2 alignment:
-- manual-control integration for the monitored drone scenario
+Recommended new files:
+- `apps/control_gateway/sensehat_client.py`
+- `apps/control_gateway/mock_controller.py`
 
-Main deliverables:
-- HTTP/TCP control ingestion
-- SenseHAT bridge
-- command validation and forwarding
-- integration support for the manual drone session
+Main focus:
+- external control input
+- Raspberry Pi / SenseHAT integration
+- command forwarding to the manual drone
 
-Do not own:
-- drone registration
-- advisory generation
-- dashboard aggregation logic
+### Member 5: Dashboard Backend
+
+Own these files/folders:
+- [apps/dashboard/main.py](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/apps/dashboard/main.py)
+
+Main focus:
+- snapshot endpoint
+- SSE stream
+- zone command API
+- backend aggregation for the operator view
+
+### Member 6: Dashboard Frontend and Demo Polish
+
+Own these files/folders:
+- [apps/dashboard/templates/index.html](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/apps/dashboard/templates/index.html)
+- [apps/dashboard/static/map.js](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/apps/dashboard/static/map.js)
+- [apps/dashboard/static/style.css](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/apps/dashboard/static/style.css)
+- [docs](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/docs)
+
+Main focus:
+- live UI quality
+- map readability
+- event panel clarity
+- zone visualization
+- final demo/readability polish
 
 ### Shared Ownership
 
 These areas are contracts and must only be changed after team agreement:
 - [packages/shared](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/packages/shared)
-- [docs](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/docs)
 - [tests](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/tests)
+- [scripts/start_local.ps1](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/scripts/start_local.ps1)
 
 ## Component Boundaries
 

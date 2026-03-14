@@ -35,51 +35,77 @@ Rule:
 
 ## Recommended Team Split
 
-Use this split if you have four people.
+Use this split if you have six people.
 
-### Workstream A: Airspace Core
+### Workstream A1: Airspace Core Lifecycle
 
 Owner:
 
-- one teammate
+- Member 1
 
 Own files:
 
 - [apps/airspace_core/core.py](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/apps/airspace_core/core.py)
-- [apps/airspace_core/rules.py](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/apps/airspace_core/rules.py)
 - [apps/airspace_core/mission.py](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/apps/airspace_core/mission.py)
 - [apps/airspace_core/main.py](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/apps/airspace_core/main.py)
 
 Main responsibility:
 
-- central coordination logic
+- central lifecycle logic
 - registration and activation
-- conflict detection
-- advisory publication
-- zone command handling
-- airspace event publication
+- mission assignment
+- lifecycle events
 
 Concrete tasks:
 
 1. Finish the registration lifecycle in `core.py`.
 2. Keep one mission assignment flow per registered drone.
-3. Improve conflict handling so it matches the Spec V2 state machine more closely.
-4. Ensure zone create/update/remove commands are handled cleanly.
-5. Publish airspace events for registration, activation, zone updates, advisories, and recovery.
-6. Keep `rules.py` as the only place for zone and conflict logic.
+3. Keep activation publishing stable.
+4. Keep lifecycle-related events stable.
 
 Definition of done:
 
 - a drone can register and receive an activation
-- the core publishes telemetry-driven advisories
-- the core accepts zone commands and republishes current zones
-- dashboard and simulator can run without importing core internals
+- the dashboard shows the drone after activation
+- simulator registration stays idempotent
 
-### Workstream B: Drone Simulator
+### Workstream A2: Airspace Core Safety Logic
 
 Owner:
 
-- one teammate
+- Member 2
+
+Own files:
+
+- [apps/airspace_core/rules.py](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/apps/airspace_core/rules.py)
+- [tests/test_rules.py](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/tests/test_rules.py)
+- [tests/test_zone_commands.py](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/tests/test_zone_commands.py)
+
+Main responsibility:
+
+- conflict detection
+- advisory policy
+- restricted-zone behavior
+- priority rules
+
+Concrete tasks:
+
+1. Improve conflict handling so it matches the Spec V2 state machine more closely.
+2. Keep zone and conflict logic centralized in `rules.py`.
+3. Add tests for edge cases in advisory and zone behavior.
+4. Coordinate with Member 1 for any required integration hook inside `core.py`.
+
+Definition of done:
+
+- conflict scenarios generate deterministic advisories
+- zone violations generate consistent behavior
+- tests cover the rule logic well enough for demo confidence
+
+### Workstream B1: Drone Simulator
+
+Owner:
+
+- Member 3
 
 Own files:
 
@@ -88,70 +114,29 @@ Own files:
 
 Main responsibility:
 
-- drone session behavior
-- state machines
+- autonomous drone behavior
 - route execution
-- telemetry publication
+- telemetry cadence
 - advisory execution
-- manual drone behavior
 
 Concrete tasks:
 
 1. Stabilize `DroneFlightMachine` for the autonomous drones.
-2. Stabilize `ManualDroneMachine` for the Raspberry Pi controlled drone.
-3. Keep telemetry periodic and consistent across states.
-4. Make advisory handling visible in telemetry and drone state.
-5. Make route recovery after evasion deterministic enough for demos.
-6. Add small tests for the simulator logic if possible.
+2. Keep telemetry periodic and consistent across states.
+3. Make advisory handling visible in telemetry and drone state.
+4. Make route recovery after evasion deterministic enough for demos.
 
 Definition of done:
 
 - autonomous drones complete `takeoff -> airborne -> landing`
-- manual drone reacts to control messages
 - advisory messages cause visible evasion behavior
 - telemetry reflects the drone state correctly on the dashboard
 
-### Workstream C: Dashboard
+### Workstream B2: Control Gateway / Raspberry Pi
 
 Owner:
 
-- one teammate
-
-Own files:
-
-- [apps/dashboard/main.py](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/apps/dashboard/main.py)
-- [apps/dashboard/templates/index.html](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/apps/dashboard/templates/index.html)
-- [apps/dashboard/static/map.js](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/apps/dashboard/static/map.js)
-- [apps/dashboard/static/style.css](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/apps/dashboard/static/style.css)
-
-Main responsibility:
-
-- operator-facing monitoring interface
-- live updates
-- map rendering
-- event visibility
-- zone visualization and zone submission
-
-Concrete tasks:
-
-1. Keep `/api/snapshot` and `/api/stream` stable.
-2. Improve the live map so drones, paths, and zones are readable.
-3. Show conflict/advisory-related events clearly in the UI.
-4. Add or improve the UI flow for creating and deleting restricted zones.
-5. Make sure the dashboard reflects the current airspace state without embedding any decision logic.
-
-Definition of done:
-
-- drones are visible and updated live
-- zones are visible
-- airspace events are readable
-- a user can create or remove a zone through the dashboard/backend flow
-
-### Workstream D: Control Gateway / Raspberry Pi
-
-Owner:
-
-- one teammate
+- Member 4
 
 Own files:
 
@@ -175,13 +160,77 @@ Concrete tasks:
 2. Keep the TCP control bridge stable.
 3. Build a Raspberry Pi client that reads keyboard input, SenseHAT joystick, or accelerometer input.
 4. Convert those inputs into `heading_delta`, `throttle_delta`, and `speed_delta`.
-5. Send those commands to the control gateway so the manual drone moves on the dashboard.
+5. Coordinate with Member 3 to validate the manual drone path end to end.
 
 Definition of done:
 
 - a control client can connect from a Raspberry Pi
 - commands reach the manual drone through MQTT
 - the manual drone visibly moves on the dashboard
+
+### Workstream C1: Dashboard Backend
+
+Owner:
+
+- Member 5
+
+Own files:
+
+- [apps/dashboard/main.py](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/apps/dashboard/main.py)
+
+Main responsibility:
+
+- operator-facing backend
+- snapshot and stream
+- zone command API
+- backend aggregation
+
+Concrete tasks:
+
+1. Keep `/api/snapshot` and `/api/stream` stable.
+2. Keep zone create/delete endpoints stable.
+3. Make sure backend payloads remain compatible with the frontend.
+4. Do not embed airspace decision logic in the backend.
+
+Definition of done:
+
+- dashboard boots from `/api/snapshot`
+- live updates work through SSE
+- zone commands can be submitted from the UI or API
+
+### Workstream C2: Dashboard Frontend and Demo Polish
+
+Owner:
+
+- Member 6
+
+Own files:
+
+- [apps/dashboard/templates/index.html](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/apps/dashboard/templates/index.html)
+- [apps/dashboard/static/map.js](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/apps/dashboard/static/map.js)
+- [apps/dashboard/static/style.css](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/apps/dashboard/static/style.css)
+- [docs](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/docs)
+
+Main responsibility:
+
+- map rendering
+- event visibility
+- zone visualization
+- dashboard readability
+- final demo polish
+
+Concrete tasks:
+
+1. Make drones, zones, and events readable at demo scale.
+2. Improve visual distinction for advisory and conflict states.
+3. Keep the UI aligned with what the Spec V2 promises.
+4. Support final demo screenshots and documentation polish.
+
+Definition of done:
+
+- the dashboard is readable during live updates
+- conflict and zone states are visually obvious
+- the frontend is stable enough for demo recording
 
 ## Shared Work Only During Integration
 
@@ -279,10 +328,12 @@ Keep this simple:
 
 Recommended branch names:
 
-- `core/...`
+- `core-lifecycle/...`
+- `core-safety/...`
 - `sim/...`
-- `dashboard/...`
 - `control/...`
+- `dashboard-backend/...`
+- `dashboard-frontend/...`
 
 ## What Each Teammate Must Read First
 
@@ -294,12 +345,21 @@ Before writing code, each teammate should read:
 4. [docs/component-contracts.md](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/docs/component-contracts.md)
 5. this file
 
+## If You Have Only Four People
+
+Combine these workstreams:
+
+- one person: Airspace Core Lifecycle + Airspace Core Safety
+- one person: Drone Simulator
+- one person: Dashboard Backend + Dashboard Frontend
+- one person: Control Gateway / Raspberry Pi
+
 ## If You Have Only Three People
 
 Combine these workstreams:
 
 - one person: Airspace Core
-- one person: Drone Simulator
-- one person: Dashboard + Control Gateway
+- one person: Drone Simulator + Control Gateway
+- one person: Dashboard
 
 In that case, do not combine Airspace Core and Drone Simulator under the same person unless absolutely necessary.
