@@ -24,7 +24,8 @@ State machines:
 
 - `DroneRegistryMachine`: registration and activation lifecycle per drone
 - `ConflictMonitorMachine`: periodic conflict scan loop
-- `AdvisoryLifecycleMachine`: advisory issued -> active -> cleared/escalated
+- `DroneFlightMachine`: takeoff -> airborne -> evading -> landing per autonomous drone
+- `ManualDroneMachine`: manual flight and advisory handling for the SenseHAT-controlled drone
 
 ### Drone Simulator
 
@@ -60,6 +61,7 @@ Responsibilities:
 ## Communication
 
 - MQTT: telemetry, registration, activation, advisories, conflict events, zone updates
+- MQTT command topic: dashboard/backend requests zone changes through `daas/airspace/zones/command`
 - HTTP: dashboard shell and configuration endpoints
 - SSE: backend-to-browser live feed
 - TCP: optional SenseHAT input bridge
@@ -78,7 +80,8 @@ The canonical topic list is defined in `packages/shared/shared/topics.py`.
 ## Traceability To Spec
 
 - UC-C1 / UC-K1: `DroneRegistryMachine`
-- UC-S1 / UC-F1: `DroneFlightMachine`
-- UC-S2: `ConflictMonitorMachine`
-- UC-S3: `AdvisoryLifecycleMachine`
+- UC-S1: `DroneRegistryMachine` + activation messages to drone sessions
+- UC-S2: `ConflictMonitorMachine` + advisory publication + `DroneFlightMachine`/`ManualDroneMachine`
+- UC-S3: zone command flow (`dashboard` -> `ZONE_COMMAND` -> `airspace_core`)
+- UC-S4: dashboard MQTT/SSE snapshot and stream pipeline
 - No-fly zones / geolock: `airspace_core.rules`

@@ -22,6 +22,26 @@ class Zone:
 
 
 @dataclass
+class ZoneCommandMessage:
+    action: str
+    zone_id: str = ""
+    zone: Zone | None = None
+    timestamp: float = field(default_factory=time.time)
+
+    def to_json(self) -> str:
+        return json.dumps(asdict(self))
+
+    @classmethod
+    def from_json(cls, data: str | bytes) -> "ZoneCommandMessage":
+        payload = json.loads(data)
+        zone_payload = payload.get("zone")
+        if zone_payload:
+            zone_payload["center"] = Position(**zone_payload["center"])
+            payload["zone"] = Zone(**zone_payload)
+        return cls(**payload)
+
+
+@dataclass
 class RegisterMessage:
     drone_id: str
     drone_type: str
@@ -103,6 +123,7 @@ class ControlMessage:
     drone_id: str
     heading_delta: float = 0.0
     throttle_delta: float = 0.0
+    speed_delta: float = 0.0
     timestamp: float = field(default_factory=time.time)
 
     def to_json(self) -> str:

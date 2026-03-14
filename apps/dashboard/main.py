@@ -3,14 +3,16 @@ import queue
 import threading
 
 import paho.mqtt.client as mqtt
-from flask import Flask, Response, jsonify, render_template
+from flask import Flask, Response, jsonify, render_template, request
 
 from shared.config import MQTT_BROKER_HOST, MQTT_BROKER_PORT
+from shared.schemas import Position, Zone, ZoneCommandMessage
 from shared.topics import (
     AIRSPACE_EVENT,
     DRONE_ACTIVATION_ALL,
     DRONE_TELEMETRY_ALL,
     MANNED_POSITION_ALL,
+    ZONE_COMMAND,
     ZONE_UPDATE,
 )
 
@@ -119,6 +121,31 @@ def stream():
                 subscribers.remove(subscriber)
 
     return Response(generate(), mimetype="text/event-stream")
+
+
+@app.post("/api/zones")
+def upsert_zone():
+    payload = request.get_json(force=True)
+    center = payload.get("center", {})
+    zone = Zone(
+        zone_id=payload["zone_id"],
+        name=payload["name"],
+        center=Position(lat=float(center["lat"]), lon=float(center["lon"]), alt=float(center.get("alt", 0.0))),
+        radius_m=float(payload["radius_m"]),
+        min_alt_m=float(payload.get("min_alt_m", 0.0)),
+        max_alt_m=float(payload.get("max_alt_m", 120.0)),
+        restricted=bool(payload.get("restricted", True)),
+    )
+    command = ZoneCommandMessage(action="upsert", zone_id=zone.zone_id, zone=zone)
+    mqtt_client.publish(ZONE_COMMAND, command.to_json())
+    return jsonify({"ok": True, "action": "upsert", "zone_id": zone.zone_id})
+
+
+@app.delete("/api/zones/<zone_id>")
+def delete_zone(zone_id: str):
+    command = ZoneCommandMessage(action="remove", zone_id=zone_id)
+    mqtt_client.publish(ZONE_COMMAND, command.to_json())
+    return jsonify({"ok": True, "action": "remove", "zone_id": zone_id})
 
 
 def main():

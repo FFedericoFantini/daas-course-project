@@ -9,13 +9,14 @@ from apps.airspace_core.mission import build_default_route
 from apps.airspace_core.rules import conflict_advisories, zone_advisories
 from shared.config import CONFLICT_CHECK_INTERVAL_MS, MQTT_BROKER_HOST, MQTT_BROKER_PORT
 from shared.models import ActivationStatus
-from shared.schemas import ActivationMessage, AirspaceEvent, RegisterMessage, TelemetryMessage, Zone
+from shared.schemas import ActivationMessage, AirspaceEvent, RegisterMessage, TelemetryMessage, Zone, ZoneCommandMessage
 from shared.topics import (
     AIRSPACE_EVENT,
     DRONE_ACTIVATION,
     DRONE_REGISTER_ALL,
     DRONE_TELEMETRY_ALL,
     MANNED_POSITION_ALL,
+    ZONE_COMMAND,
     ZONE_UPDATE,
 )
 
@@ -139,7 +140,7 @@ class AirspaceCore:
         self.driver.start(keep_active=True)
         self.mqtt_client.connect(self.broker_host, self.broker_port)
         self.mqtt_client.loop_start()
-        self.mqtt_client.publish(ZONE_UPDATE, self._zones_payload())
+        self._publish_zones()
         logger.info("Airspace core started")
 
     def stop(self):
@@ -159,16 +160,40 @@ class AirspaceCore:
         self.mqtt_client.publish(DRONE_ADVISORY.format(drone_id=advisory.drone_id), advisory.to_json())
         self.publish_event("advisory", advisory.drone_id, advisory.details)
 
+    def _publish_zones(self):
+        self.mqtt_client.publish(ZONE_UPDATE, self._zones_payload())
+
     def _zones_payload(self) -> str:
         import json
         from dataclasses import asdict
 
         return json.dumps([asdict(zone) for zone in self.zones])
 
+    def _upsert_zone(self, zone: Zone):
+        for index, existing in enumerate(self.zones):
+            if existing.zone_id == zone.zone_id:
+                self.zones[index] = zone
+                self.publish_event("zone_updated", zone.zone_id, f"Constraint {zone.name} updated")
+                self._publish_zones()
+                return
+        self.zones.append(zone)
+        self.publish_event("zone_created", zone.zone_id, f"Constraint {zone.name} activated")
+        self._publish_zones()
+
+    def _remove_zone(self, zone_id: str):
+        for index, existing in enumerate(self.zones):
+            if existing.zone_id == zone_id:
+                removed = self.zones.pop(index)
+                self.publish_event("zone_removed", zone_id, f"Constraint {removed.name} removed")
+                self._publish_zones()
+                return
+        self.publish_event("zone_missing", zone_id, "Constraint removal ignored because the zone does not exist")
+
     def _on_connect(self, client, userdata, flags, reason_code, properties=None):
         client.subscribe(DRONE_REGISTER_ALL)
         client.subscribe(DRONE_TELEMETRY_ALL)
         client.subscribe(MANNED_POSITION_ALL)
+        client.subscribe(ZONE_COMMAND)
         logger.info("Connected to MQTT broker")
 
     def _on_message(self, client, userdata, msg):
@@ -179,6 +204,8 @@ class AirspaceCore:
             self._handle_telemetry(TelemetryMessage.from_json(msg.payload))
         elif parts[1] == "manned":
             self._handle_manned(TelemetryMessage.from_json(msg.payload))
+        elif msg.topic == ZONE_COMMAND:
+            self._handle_zone_command(ZoneCommandMessage.from_json(msg.payload))
 
     def _handle_register(self, register_msg: RegisterMessage):
         with self._lock:
@@ -194,3 +221,19 @@ class AirspaceCore:
 
     def _handle_manned(self, telemetry: TelemetryMessage):
         self.manned[telemetry.drone_id] = telemetry
+
+    def _handle_zone_command(self, command: ZoneCommandMessage):
+        with self._lock:
+            if command.action == "upsert":
+                if not command.zone:
+                    self.publish_event("zone_rejected", command.zone_id or "unknown", "Zone update missing payload")
+                    return
+                self._upsert_zone(command.zone)
+                return
+            if command.action == "remove":
+                if not command.zone_id:
+                    self.publish_event("zone_rejected", "unknown", "Zone removal missing zone_id")
+                    return
+                self._remove_zone(command.zone_id)
+                return
+            self.publish_event("zone_rejected", command.zone_id or "unknown", f"Unsupported zone action {command.action}")
