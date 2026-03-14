@@ -313,6 +313,7 @@ This makes it easy to connect a Raspberry Pi process that reads SenseHAT values 
 
 - Architecture: [docs/architecture.md](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/docs/architecture.md)
 - Component contracts: [docs/component-contracts.md](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/docs/component-contracts.md)
+- Development plan: [docs/development-plan.md](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/docs/development-plan.md)
 - Team split: [docs/team-split.md](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/docs/team-split.md)
 
 ## Suggested Next Team Milestones
