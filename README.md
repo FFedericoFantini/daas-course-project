@@ -1,4 +1,4 @@
-# DAAS Course Project
+﻿# DAAS Course Project
 
 Modular Drone Airspace Advisory System designed for the TTM4115 project workflow.
 
@@ -68,8 +68,8 @@ The repository is now organized to support a team of 6 people working from the f
 ### Member 1: Federico - Airspace Core Lifecycle
 
 Own these files/folders:
-- [apps/airspace_core/core.py](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/apps/airspace_core/core.py)
-- [apps/airspace_core/mission.py](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/apps/airspace_core/mission.py)
+- [apps/airspace_core/core.py](apps/airspace_core/core.py)
+- [apps/airspace_core/mission.py](apps/airspace_core/mission.py)
 
 Main focus:
 - registration
@@ -80,8 +80,8 @@ Main focus:
 ### Member 2: Mats - Airspace Core Safety Logic
 
 Own these files/folders:
-- [apps/airspace_core/rules.py](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/apps/airspace_core/rules.py)
-- [tests/test_rules.py](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/tests/test_rules.py)
+- [apps/airspace_core/rules.py](apps/airspace_core/rules.py)
+- [tests/test_rules.py](tests/test_rules.py)
 
 Main focus:
 - conflict detection
@@ -95,8 +95,8 @@ Note:
 ### Member 3: Auslaug - Drone Simulator
 
 Own these files/folders:
-- [apps/drone_simulator/fleet.py](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/apps/drone_simulator/fleet.py)
-- [apps/drone_simulator/main.py](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/apps/drone_simulator/main.py)
+- [apps/drone_simulator/fleet.py](apps/drone_simulator/fleet.py)
+- [apps/drone_simulator/main.py](apps/drone_simulator/main.py)
 
 Main focus:
 - autonomous drone state machines
@@ -107,7 +107,7 @@ Main focus:
 ### Member 4: Isak - Control Gateway / Raspberry Pi
 
 Own these files/folders:
-- [apps/control_gateway/main.py](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/apps/control_gateway/main.py)
+- [apps/control_gateway/main.py](apps/control_gateway/main.py)
 
 Recommended new files:
 - `apps/control_gateway/sensehat_client.py`
@@ -121,7 +121,7 @@ Main focus:
 ### Member 5: Asne - Dashboard Backend
 
 Own these files/folders:
-- [apps/dashboard/main.py](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/apps/dashboard/main.py)
+- [apps/dashboard/main.py](apps/dashboard/main.py)
 
 Main focus:
 - snapshot endpoint
@@ -132,10 +132,10 @@ Main focus:
 ### Member 6: Jordan - Dashboard Frontend and Demo Polish
 
 Own these files/folders:
-- [apps/dashboard/templates/index.html](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/apps/dashboard/templates/index.html)
-- [apps/dashboard/static/map.js](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/apps/dashboard/static/map.js)
-- [apps/dashboard/static/style.css](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/apps/dashboard/static/style.css)
-- [docs](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/docs)
+- [apps/dashboard/templates/index.html](apps/dashboard/templates/index.html)
+- [apps/dashboard/static/map.js](apps/dashboard/static/map.js)
+- [apps/dashboard/static/style.css](apps/dashboard/static/style.css)
+- [docs](docs)
 
 Main focus:
 - live UI quality
@@ -147,9 +147,9 @@ Main focus:
 ### Shared Ownership
 
 These areas are contracts and must only be changed after team agreement:
-- [packages/shared](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/packages/shared)
-- [tests](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/tests)
-- [scripts/start_local.ps1](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/scripts/start_local.ps1)
+- [packages/shared](packages/shared)
+- [tests](tests)
+- [scripts/start_local.ps1](scripts/start_local.ps1)
 
 ## Component Boundaries
 
@@ -166,7 +166,7 @@ To avoid team collisions:
 Use this workflow if teammates are developing directly from the Spec V2 and this repository.
 
 1. Read the Spec V2 use cases first.
-2. Read [docs/architecture.md](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/docs/architecture.md) and [docs/component-contracts.md](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/docs/component-contracts.md).
+2. Read [docs/architecture.md](docs/architecture.md) and [docs/component-contracts.md](docs/component-contracts.md).
 3. Pick one owned component and work only inside that component unless the team has agreed a shared-contract change.
 4. Treat `packages/shared` as frozen by default.
 5. Test each component locally against the current MQTT topics before integrating UI or hardware changes.
@@ -181,7 +181,7 @@ Practical rule:
 
 If the team wants to avoid blocking:
 
-1. Freeze [packages/shared/shared/topics.py](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/packages/shared/shared/topics.py) and [packages/shared/shared/schemas.py](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/packages/shared/shared/schemas.py).
+1. Freeze [packages/shared/shared/topics.py](packages/shared/shared/topics.py) and [packages/shared/shared/schemas.py](packages/shared/shared/schemas.py).
 2. Finish the end-to-end flow `register -> activate -> telemetry`.
 3. Finish the end-to-end flow `detect conflict -> publish advisory -> drone reacts`.
 4. Finish the end-to-end flow `define zone -> publish zone update -> dashboard shows zone`.
@@ -190,10 +190,10 @@ If the team wants to avoid blocking:
 ## Current State Machines
 
 Implemented with STMPY:
-- `DroneRegistryMachine` in [apps/airspace_core/core.py](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/apps/airspace_core/core.py)
-- `ConflictMonitorMachine` in [apps/airspace_core/core.py](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/apps/airspace_core/core.py)
-- `DroneFlightMachine` in [apps/drone_simulator/fleet.py](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/apps/drone_simulator/fleet.py)
-- `ManualDroneMachine` in [apps/drone_simulator/fleet.py](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/apps/drone_simulator/fleet.py)
+- `DroneRegistryMachine` in [apps/airspace_core/core.py](apps/airspace_core/core.py)
+- `ConflictMonitorMachine` in [apps/airspace_core/core.py](apps/airspace_core/core.py)
+- `DroneFlightMachine` in [apps/drone_simulator/fleet.py](apps/drone_simulator/fleet.py)
+- `ManualDroneMachine` in [apps/drone_simulator/fleet.py](apps/drone_simulator/fleet.py)
 
 Not state-machine-driven right now:
 - `dashboard`
@@ -207,10 +207,10 @@ Not state-machine-driven right now:
 - HTTP + TCP integration for control input
 
 Canonical topics are defined in:
-- [packages/shared/shared/topics.py](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/packages/shared/shared/topics.py)
+- [packages/shared/shared/topics.py](packages/shared/shared/topics.py)
 
 Canonical message schemas are defined in:
-- [packages/shared/shared/schemas.py](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/packages/shared/shared/schemas.py)
+- [packages/shared/shared/schemas.py](packages/shared/shared/schemas.py)
 
 ## Traceability To Spec V2
 
@@ -223,7 +223,7 @@ Canonical message schemas are defined in:
 
 The repository implementation follows the same deployment structure described in the final Spec V2.
 
-- [Open the deployment diagram PDF](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/docs/diagrams/Deployment_Diagram_Team_18.pdf)
+- [Open the deployment diagram PDF](docs/diagrams/Deployment_Diagram_Team_18.pdf)
 
 ## Minimal Local Run
 
@@ -312,10 +312,10 @@ This makes it easy to connect a Raspberry Pi process that reads SenseHAT values 
 
 ## Key Docs
 
-- Architecture: [docs/architecture.md](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/docs/architecture.md)
-- Component contracts: [docs/component-contracts.md](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/docs/component-contracts.md)
-- Development plan: [docs/development-plan.md](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/docs/development-plan.md)
-- Team split: [docs/team-split.md](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/docs/team-split.md)
+- Architecture: [docs/architecture.md](docs/architecture.md)
+- Component contracts: [docs/component-contracts.md](docs/component-contracts.md)
+- Development plan: [docs/development-plan.md](docs/development-plan.md)
+- Team split: [docs/team-split.md](docs/team-split.md)
 
 ## Suggested Next Team Milestones
 
@@ -325,3 +325,4 @@ This makes it easy to connect a Raspberry Pi process that reads SenseHAT values 
 4. Finish conflict detection -> advisory -> recovery flow.
 5. Add manned aircraft and restricted zone scenarios.
 6. Add integration tests across components.
+

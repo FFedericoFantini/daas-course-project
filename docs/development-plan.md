@@ -1,4 +1,4 @@
-# Development Plan
+﻿# Development Plan
 
 This document turns the final Spec V2 into a concrete development plan for the repository.
 
@@ -15,18 +15,18 @@ Build a DAAS prototype that supports these sea-level use cases:
 
 The implementation must stay aligned with:
 
-- [docs/architecture.md](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/docs/architecture.md)
-- [docs/component-contracts.md](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/docs/component-contracts.md)
+- [docs/architecture.md](../docs/architecture.md)
+- [docs/component-contracts.md](../docs/component-contracts.md)
 - the final Spec V2
 
 ## Freeze First
 
 Before teammates start in parallel, treat these files as shared contracts:
 
-- [packages/shared/shared/topics.py](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/packages/shared/shared/topics.py)
-- [packages/shared/shared/schemas.py](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/packages/shared/shared/schemas.py)
-- [packages/shared/shared/models.py](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/packages/shared/shared/models.py)
-- [packages/shared/shared/config.py](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/packages/shared/shared/config.py)
+- [packages/shared/shared/topics.py](../packages/shared/shared/topics.py)
+- [packages/shared/shared/schemas.py](../packages/shared/shared/schemas.py)
+- [packages/shared/shared/models.py](../packages/shared/shared/models.py)
+- [packages/shared/shared/config.py](../packages/shared/shared/config.py)
 
 Rule:
 
@@ -45,9 +45,9 @@ Owner:
 
 Own files:
 
-- [apps/airspace_core/core.py](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/apps/airspace_core/core.py)
-- [apps/airspace_core/mission.py](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/apps/airspace_core/mission.py)
-- [apps/airspace_core/main.py](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/apps/airspace_core/main.py)
+- [apps/airspace_core/core.py](../apps/airspace_core/core.py)
+- [apps/airspace_core/mission.py](../apps/airspace_core/mission.py)
+- [apps/airspace_core/main.py](../apps/airspace_core/main.py)
 
 Main responsibility:
 
@@ -77,9 +77,9 @@ Owner:
 
 Own files:
 
-- [apps/airspace_core/rules.py](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/apps/airspace_core/rules.py)
-- [tests/test_rules.py](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/tests/test_rules.py)
-- [tests/test_zone_commands.py](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/tests/test_zone_commands.py)
+- [apps/airspace_core/rules.py](../apps/airspace_core/rules.py)
+- [tests/test_rules.py](../tests/test_rules.py)
+- [tests/test_zone_commands.py](../tests/test_zone_commands.py)
 
 Main responsibility:
 
@@ -109,8 +109,8 @@ Owner:
 
 Own files:
 
-- [apps/drone_simulator/fleet.py](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/apps/drone_simulator/fleet.py)
-- [apps/drone_simulator/main.py](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/apps/drone_simulator/main.py)
+- [apps/drone_simulator/fleet.py](../apps/drone_simulator/fleet.py)
+- [apps/drone_simulator/main.py](../apps/drone_simulator/main.py)
 
 Main responsibility:
 
@@ -140,7 +140,7 @@ Owner:
 
 Own files:
 
-- [apps/control_gateway/main.py](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/apps/control_gateway/main.py)
+- [apps/control_gateway/main.py](../apps/control_gateway/main.py)
 
 Recommended new files to create if needed:
 
@@ -176,7 +176,7 @@ Owner:
 
 Own files:
 
-- [apps/dashboard/main.py](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/apps/dashboard/main.py)
+- [apps/dashboard/main.py](../apps/dashboard/main.py)
 
 Main responsibility:
 
@@ -206,10 +206,10 @@ Owner:
 
 Own files:
 
-- [apps/dashboard/templates/index.html](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/apps/dashboard/templates/index.html)
-- [apps/dashboard/static/map.js](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/apps/dashboard/static/map.js)
-- [apps/dashboard/static/style.css](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/apps/dashboard/static/style.css)
-- [docs](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/docs)
+- [apps/dashboard/templates/index.html](../apps/dashboard/templates/index.html)
+- [apps/dashboard/static/map.js](../apps/dashboard/static/map.js)
+- [apps/dashboard/static/style.css](../apps/dashboard/static/style.css)
+- [docs](../docs)
 
 Main responsibility:
 
@@ -236,12 +236,12 @@ Definition of done:
 
 These files should only be touched during agreed integration work:
 
-- [packages/shared/shared/topics.py](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/packages/shared/shared/topics.py)
-- [packages/shared/shared/schemas.py](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/packages/shared/shared/schemas.py)
-- [packages/shared/shared/models.py](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/packages/shared/shared/models.py)
-- [packages/shared/shared/config.py](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/packages/shared/shared/config.py)
-- [scripts/start_local.ps1](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/scripts/start_local.ps1)
-- [README.md](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/README.md)
+- [packages/shared/shared/topics.py](../packages/shared/shared/topics.py)
+- [packages/shared/shared/schemas.py](../packages/shared/shared/schemas.py)
+- [packages/shared/shared/models.py](../packages/shared/shared/models.py)
+- [packages/shared/shared/config.py](../packages/shared/shared/config.py)
+- [scripts/start_local.ps1](../scripts/start_local.ps1)
+- [README.md](../README.md)
 
 ## Integration Order
 
@@ -340,9 +340,9 @@ Recommended branch names:
 Before writing code, each teammate should read:
 
 1. the relevant Spec V2 use cases
-2. [README.md](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/README.md)
-3. [docs/architecture.md](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/docs/architecture.md)
-4. [docs/component-contracts.md](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/docs/component-contracts.md)
+2. [README.md](../README.md)
+3. [docs/architecture.md](../docs/architecture.md)
+4. [docs/component-contracts.md](../docs/component-contracts.md)
 5. this file
 
 ## If You Have Only Four People
@@ -363,3 +363,4 @@ Combine these workstreams:
 - one person: Dashboard
 
 In that case, do not combine Airspace Core and Drone Simulator under the same person unless absolutely necessary.
+
