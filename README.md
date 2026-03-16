@@ -33,13 +33,14 @@ This is the component that simulates drone behavior in the airspace.
 ### `apps/dashboard`
 
 Main responsibility:
-- operator-facing dashboard
+- operator-facing dashboards
 - live map rendering
 - airspace event visualization
 - restricted zone visualization
+- mission-planner UI for manual drone creation
 - browser delivery via Flask
 
-This is the component that shows what is happening.
+This is the component that shows what is happening and lets an operator request new drone missions from pickup/dropoff points.
 
 ### `apps/control_gateway`
 
@@ -127,7 +128,8 @@ Main focus:
 - snapshot endpoint
 - SSE stream
 - zone command API
-- backend aggregation for the operator view
+- mission request API
+- backend aggregation for the operator views
 
 ### Member 6: Jordan - Dashboard Frontend and Demo Polish
 
@@ -142,6 +144,7 @@ Main focus:
 - map readability
 - event panel clarity
 - zone visualization
+- planner usability
 - final demo/readability polish
 
 ### Shared Ownership
@@ -186,6 +189,7 @@ If the team wants to avoid blocking:
 3. Finish the end-to-end flow `detect conflict -> publish advisory -> drone reacts`.
 4. Finish the end-to-end flow `define zone -> publish zone update -> dashboard shows zone`.
 5. Connect the manual drone path `SenseHAT/control gateway -> control topic -> manual drone session`.
+6. Finish the planner flow `mission request -> spawn drone -> activate route -> dashboard shows new mission`.
 
 ## Current State Machines
 
@@ -203,6 +207,7 @@ Not state-machine-driven right now:
 
 - MQTT between backend components
 - MQTT zone-command flow between dashboard/backend and airspace core
+- MQTT mission-request flow between planner dashboard, airspace core, and drone simulator
 - HTTP + SSE between dashboard backend and browser
 - HTTP + TCP integration for control input
 
@@ -215,6 +220,7 @@ Canonical message schemas are defined in:
 ## Traceability To Spec V2
 
 - `Register Drone for Monitored Flight` -> `apps/airspace_core` + `apps/drone_simulator`
+- `Register Drone for Monitored Flight (manual planner flow)` -> `apps/dashboard` + `apps/airspace_core` + `apps/drone_simulator`
 - `Resolve Airspace Conflict` -> `apps/airspace_core` + `apps/drone_simulator`
 - `Define Restricted Airspace Constraints` -> `apps/dashboard` + `apps/airspace_core`
 - `Monitor Active Airspace` -> `apps/dashboard`
@@ -259,7 +265,7 @@ If you already have Mosquitto running locally, you can use that instead.
 python -m apps.airspace_core.main
 python -m apps.dashboard.main
 python -m apps.control_gateway.main
-python -m apps.drone_simulator.main --drones 5
+python -m apps.drone_simulator.main --drones 6 --manual-drone-id drone-rpi-001
 ```
 
 Or use:
@@ -270,8 +276,29 @@ Or use:
 
 ## Main URLs
 
-- Dashboard: [http://127.0.0.1:5001](http://127.0.0.1:5001)
+- Monitoring Dashboard: [http://127.0.0.1:5001](http://127.0.0.1:5001)
+- Mission Planner Dashboard: [http://127.0.0.1:5001/planner](http://127.0.0.1:5001/planner)
 - Control Gateway API: [http://127.0.0.1:5002](http://127.0.0.1:5002)
+
+## Mission Planner Dashboard
+
+The repository now includes a second dashboard page dedicated to manual mission creation.
+
+Planner flow:
+
+- open [http://127.0.0.1:5001/planner](http://127.0.0.1:5001/planner)
+- choose a unique `drone_id`
+- click the map once for the pickup point
+- click the map again for the dropoff point
+- submit the mission request
+
+What happens next:
+
+- the planner publishes a mission request
+- the airspace core stores the requested route
+- the simulator spawns the requested drone dynamically
+- the airspace core activates that drone with the requested pickup/dropoff route
+- the monitoring dashboard starts showing the new drone and mission
 
 ## Raspberry Pi / SenseHAT Controlled Drone
 

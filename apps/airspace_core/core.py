@@ -6,17 +6,27 @@ from dataclasses import dataclass
 import paho.mqtt.client as mqtt
 import stmpy
 
-from apps.airspace_core.mission import build_default_route
+from apps.airspace_core.mission import build_default_route, build_requested_route
 from apps.airspace_core.rules import conflict_advisories, zone_advisories
 from shared.config import CONFLICT_CHECK_INTERVAL_MS, MQTT_BROKER_HOST, MQTT_BROKER_PORT
 from shared.models import ActivationStatus, DroneState
-from shared.schemas import ActivationMessage, AirspaceEvent, RegisterMessage, TelemetryMessage, Zone, ZoneCommandMessage
+from shared.schemas import (
+    ActivationMessage,
+    AirspaceEvent,
+    MissionRequestMessage,
+    RegisterMessage,
+    TelemetryMessage,
+    Zone,
+    ZoneCommandMessage,
+)
 from shared.topics import (
     AIRSPACE_EVENT,
     DRONE_ACTIVATION,
     DRONE_REGISTER_ALL,
+    DRONE_SPAWN_REQUEST,
     DRONE_TELEMETRY_ALL,
     MANNED_POSITION_ALL,
+    MISSION_REQUEST,
     ZONE_COMMAND,
     ZONE_UPDATE,
 )
@@ -80,19 +90,11 @@ class DroneRegistryMachine:
         self.stm.send("activate")
 
     def on_activate(self):
-        mission_id = f"{self.drone_id}-mission-{self.mission_counter:03d}"
-        route = build_default_route(self.service.next_route_index())
-        activation = ActivationMessage(
-            drone_id=self.drone_id,
-            status=ActivationStatus.APPROVED.value,
-            mission_id=mission_id,
-            route=route,
-            reason="Mission assigned by airspace core",
-        )
+        activation = self.service._create_activation_for_drone(self.drone_id, self.mission_counter)
         self.mission_counter += 1
         self.service._record_activation(activation)
         self.service.mqtt_client.publish(DRONE_ACTIVATION.format(drone_id=self.drone_id), activation.to_json())
-        self.service.publish_event("drone_activated", self.drone_id, f"Mission {mission_id} assigned")
+        self.service.publish_event("drone_activated", self.drone_id, f"Mission {activation.mission_id} assigned")
 
     def on_delay(self):
         self.service.publish_event("drone_delayed", self.drone_id, "Activation delayed")
@@ -144,6 +146,7 @@ class AirspaceCore:
         self.registry_machines: dict[str, DroneRegistryMachine] = {}
         self.participants: dict[str, ParticipantLifecycle] = {}
         self.activations: dict[str, ActivationMessage] = {}
+        self.pending_mission_requests: dict[str, MissionRequestMessage] = {}
         self.drones: dict[str, TelemetryMessage] = {}
         self.manned: dict[str, TelemetryMessage] = {}
         self.zones = self._default_zones()
@@ -234,6 +237,46 @@ class AirspaceCore:
         participant.last_reported_state = DroneState.ACTIVATED.value
         self.activations[activation.drone_id] = activation
 
+    def _create_activation_for_drone(self, drone_id: str, mission_counter: int) -> ActivationMessage:
+        request = self.pending_mission_requests.pop(drone_id, None)
+        mission_id = f"{drone_id}-mission-{mission_counter:03d}"
+        route = build_default_route(self.next_route_index())
+        reason = "Mission assigned by airspace core"
+
+        if request is not None:
+            route = build_requested_route(request.pickup, request.dropoff)
+            reason = "Mission assigned from planner request"
+
+        return ActivationMessage(
+            drone_id=drone_id,
+            status=ActivationStatus.APPROVED.value,
+            mission_id=mission_id,
+            route=route,
+            reason=reason,
+        )
+
+    def _handle_mission_request(self, request: MissionRequestMessage):
+        drone_id = request.drone_id
+        with self._lock:
+            if drone_id in self.pending_mission_requests:
+                self.publish_event("mission_request_rejected", drone_id, "A pending mission request already exists")
+                return
+            if drone_id in self.participants:
+                self.publish_event(
+                    "mission_request_rejected",
+                    drone_id,
+                    "Drone id already exists in the monitored airspace",
+                )
+                return
+            self.pending_mission_requests[drone_id] = request
+            self.publish_event(
+                "mission_requested",
+                drone_id,
+                f"Mission requested from planner: pickup ({request.pickup.lat:.5f}, {request.pickup.lon:.5f})"
+                f" -> dropoff ({request.dropoff.lat:.5f}, {request.dropoff.lon:.5f})",
+            )
+        self.mqtt_client.publish(DRONE_SPAWN_REQUEST, request.to_json())
+
     def _mark_participant_inactive(self, drone_id: str, details: str):
         participant = self._participant(drone_id)
         participant.lifecycle_state = "inactive"
@@ -318,6 +361,7 @@ class AirspaceCore:
         client.subscribe(DRONE_TELEMETRY_ALL)
         client.subscribe(MANNED_POSITION_ALL)
         client.subscribe(ZONE_COMMAND)
+        client.subscribe(MISSION_REQUEST)
         logger.info("Connected to MQTT broker")
 
     def _on_message(self, client, userdata, msg):
@@ -330,6 +374,8 @@ class AirspaceCore:
             self._handle_manned(TelemetryMessage.from_json(msg.payload))
         elif msg.topic == ZONE_COMMAND:
             self._handle_zone_command(ZoneCommandMessage.from_json(msg.payload))
+        elif msg.topic == MISSION_REQUEST:
+            self._handle_mission_request(MissionRequestMessage.from_json(msg.payload))
 
     def _handle_register(self, register_msg: RegisterMessage):
         with self._lock:

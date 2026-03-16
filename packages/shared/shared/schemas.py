@@ -79,6 +79,28 @@ class ActivationMessage:
 
 
 @dataclass
+class MissionRequestMessage:
+    drone_id: str
+    pickup: Position
+    dropoff: Position
+    operator: str = "planner"
+    drone_type: str = "quadcopter"
+    cruise_altitude: float = 60.0
+    max_speed: float = 25.0
+    timestamp: float = field(default_factory=time.time)
+
+    def to_json(self) -> str:
+        return json.dumps(asdict(self))
+
+    @classmethod
+    def from_json(cls, data: str | bytes) -> "MissionRequestMessage":
+        payload = json.loads(data)
+        payload["pickup"] = Position(**payload["pickup"])
+        payload["dropoff"] = Position(**payload["dropoff"])
+        return cls(**payload)
+
+
+@dataclass
 class TelemetryMessage:
     drone_id: str
     timestamp: float

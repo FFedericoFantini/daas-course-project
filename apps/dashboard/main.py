@@ -5,12 +5,13 @@ import threading
 import paho.mqtt.client as mqtt
 from flask import Flask, Response, jsonify, render_template, request
 
-from shared.config import MQTT_BROKER_HOST, MQTT_BROKER_PORT
-from shared.schemas import Position, Zone, ZoneCommandMessage
+from shared.config import DEFAULT_CRUISE_ALTITUDE_M, DEFAULT_CRUISE_SPEED_MS, MQTT_BROKER_HOST, MQTT_BROKER_PORT
+from shared.schemas import MissionRequestMessage, Position, Zone, ZoneCommandMessage
 from shared.topics import (
     AIRSPACE_EVENT,
     DRONE_ACTIVATION_ALL,
     DRONE_TELEMETRY_ALL,
+    MISSION_REQUEST,
     MANNED_POSITION_ALL,
     ZONE_COMMAND,
     ZONE_UPDATE,
@@ -91,6 +92,11 @@ def index():
     return render_template("index.html")
 
 
+@app.route("/planner")
+def planner():
+    return render_template("planner.html")
+
+
 @app.route("/api/snapshot")
 def snapshot():
     with state_lock:
@@ -146,6 +152,24 @@ def delete_zone(zone_id: str):
     command = ZoneCommandMessage(action="remove", zone_id=zone_id)
     mqtt_client.publish(ZONE_COMMAND, command.to_json())
     return jsonify({"ok": True, "action": "remove", "zone_id": zone_id})
+
+
+@app.post("/api/mission-requests")
+def create_mission_request():
+    payload = request.get_json(force=True)
+    pickup = payload.get("pickup", {})
+    dropoff = payload.get("dropoff", {})
+    mission = MissionRequestMessage(
+        drone_id=payload["drone_id"],
+        operator=payload.get("operator", "planner"),
+        drone_type=payload.get("drone_type", "quadcopter"),
+        pickup=Position(lat=float(pickup["lat"]), lon=float(pickup["lon"]), alt=float(pickup.get("alt", 0.0))),
+        dropoff=Position(lat=float(dropoff["lat"]), lon=float(dropoff["lon"]), alt=float(dropoff.get("alt", 0.0))),
+        cruise_altitude=float(payload.get("cruise_altitude", DEFAULT_CRUISE_ALTITUDE_M)),
+        max_speed=float(payload.get("max_speed", DEFAULT_CRUISE_SPEED_MS)),
+    )
+    mqtt_client.publish(MISSION_REQUEST, mission.to_json())
+    return jsonify({"ok": True, "drone_id": mission.drone_id, "action": "mission_request"})
 
 
 def main():

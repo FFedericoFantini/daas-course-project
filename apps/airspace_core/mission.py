@@ -23,3 +23,10 @@ def build_default_route(offset_index: int) -> list[Position]:
         alt=DEFAULT_CRUISE_ALTITUDE_M,
     )
     return [start, end]
+
+
+def build_requested_route(pickup: Position, dropoff: Position) -> list[Position]:
+    return [
+        Position(lat=pickup.lat, lon=pickup.lon, alt=pickup.alt),
+        Position(lat=dropoff.lat, lon=dropoff.lon, alt=dropoff.alt),
+    ]
