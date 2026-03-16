@@ -1,6 +1,7 @@
 import logging
 import threading
 from collections import defaultdict
+from dataclasses import dataclass
 
 import paho.mqtt.client as mqtt
 import stmpy
@@ -8,7 +9,7 @@ import stmpy
 from apps.airspace_core.mission import build_default_route
 from apps.airspace_core.rules import conflict_advisories, zone_advisories
 from shared.config import CONFLICT_CHECK_INTERVAL_MS, MQTT_BROKER_HOST, MQTT_BROKER_PORT
-from shared.models import ActivationStatus
+from shared.models import ActivationStatus, DroneState
 from shared.schemas import ActivationMessage, AirspaceEvent, RegisterMessage, TelemetryMessage, Zone, ZoneCommandMessage
 from shared.topics import (
     AIRSPACE_EVENT,
@@ -21,6 +22,39 @@ from shared.topics import (
 )
 
 logger = logging.getLogger(__name__)
+
+ACTIVE_TELEMETRY_STATES = {
+    DroneState.ACTIVATED.value,
+    DroneState.TAKEOFF.value,
+    DroneState.AIRBORNE.value,
+    DroneState.MANUAL.value,
+    DroneState.EVADING.value,
+    DroneState.LANDING.value,
+}
+
+INACTIVE_TELEMETRY_STATES = {
+    DroneState.IDLE.value,
+    DroneState.COMPLETED.value,
+    DroneState.ABORTED.value,
+    DroneState.OFFLINE.value,
+}
+
+
+@dataclass
+class ParticipantLifecycle:
+    drone_id: str
+    lifecycle_state: str = DroneState.OFFLINE.value
+    drone_type: str = ""
+    operator: str = ""
+    max_altitude: float = 0.0
+    max_speed: float = 0.0
+    last_register_at: float = 0.0
+    last_telemetry_at: float = 0.0
+    last_reported_state: str = DroneState.OFFLINE.value
+    active_mission_id: str = ""
+    activation_count: int = 0
+    registration_count: int = 0
+    refresh_count: int = 0
 
 
 class DroneRegistryMachine:
@@ -41,6 +75,7 @@ class DroneRegistryMachine:
         return stmpy.Machine(name=f"registry-{self.drone_id}", transitions=transitions, obj=self)
 
     def on_registered(self):
+        self.service._record_registration(self.register_msg)
         self.service.publish_event("drone_registered", self.drone_id, "Drone registered")
         self.stm.send("activate")
 
@@ -55,7 +90,7 @@ class DroneRegistryMachine:
             reason="Mission assigned by airspace core",
         )
         self.mission_counter += 1
-        self.service.activations[self.drone_id] = activation
+        self.service._record_activation(activation)
         self.service.mqtt_client.publish(DRONE_ACTIVATION.format(drone_id=self.drone_id), activation.to_json())
         self.service.publish_event("drone_activated", self.drone_id, f"Mission {mission_id} assigned")
 
@@ -63,6 +98,7 @@ class DroneRegistryMachine:
         self.service.publish_event("drone_delayed", self.drone_id, "Activation delayed")
 
     def on_complete(self):
+        self.service._mark_participant_inactive(self.drone_id, "Mission completed and drone returned to idle")
         self.service.publish_event("mission_completed", self.drone_id, "Drone returned to registered")
 
 
@@ -106,6 +142,7 @@ class AirspaceCore:
         self.route_index = 0
 
         self.registry_machines: dict[str, DroneRegistryMachine] = {}
+        self.participants: dict[str, ParticipantLifecycle] = {}
         self.activations: dict[str, ActivationMessage] = {}
         self.drones: dict[str, TelemetryMessage] = {}
         self.manned: dict[str, TelemetryMessage] = {}
@@ -160,6 +197,93 @@ class AirspaceCore:
         self.mqtt_client.publish(DRONE_ADVISORY.format(drone_id=advisory.drone_id), advisory.to_json())
         self.publish_event("advisory", advisory.drone_id, advisory.details)
 
+    def _participant(self, drone_id: str) -> ParticipantLifecycle:
+        participant = self.participants.get(drone_id)
+        if participant is None:
+            participant = ParticipantLifecycle(drone_id=drone_id)
+            self.participants[drone_id] = participant
+        return participant
+
+    def _apply_registration_metadata(self, participant: ParticipantLifecycle, register_msg: RegisterMessage):
+        participant.drone_type = register_msg.drone_type
+        participant.operator = register_msg.operator
+        participant.max_altitude = register_msg.max_altitude
+        participant.max_speed = register_msg.max_speed
+        participant.last_register_at = register_msg.timestamp
+
+    def _record_registration(self, register_msg: RegisterMessage):
+        participant = self._participant(register_msg.drone_id)
+        self._apply_registration_metadata(participant, register_msg)
+        participant.registration_count += 1
+        participant.last_reported_state = DroneState.REGISTERED.value
+        participant.lifecycle_state = DroneState.REGISTERED.value
+
+    def _refresh_registration(self, register_msg: RegisterMessage):
+        participant = self._participant(register_msg.drone_id)
+        self._apply_registration_metadata(participant, register_msg)
+        participant.refresh_count += 1
+        if participant.lifecycle_state == DroneState.OFFLINE.value:
+            participant.lifecycle_state = DroneState.REGISTERED.value
+            participant.last_reported_state = DroneState.REGISTERED.value
+
+    def _record_activation(self, activation: ActivationMessage):
+        participant = self._participant(activation.drone_id)
+        participant.lifecycle_state = "active"
+        participant.active_mission_id = activation.mission_id
+        participant.activation_count += 1
+        participant.last_reported_state = DroneState.ACTIVATED.value
+        self.activations[activation.drone_id] = activation
+
+    def _mark_participant_inactive(self, drone_id: str, details: str):
+        participant = self._participant(drone_id)
+        participant.lifecycle_state = "inactive"
+        participant.active_mission_id = ""
+        participant.last_reported_state = DroneState.IDLE.value
+        self.publish_event("drone_inactive", drone_id, details)
+
+    def _update_lifecycle_from_telemetry(self, telemetry: TelemetryMessage):
+        participant = self._participant(telemetry.drone_id)
+        previous_state = participant.lifecycle_state
+        participant.last_telemetry_at = telemetry.timestamp
+        participant.last_reported_state = telemetry.state
+        if telemetry.mission_id:
+            participant.active_mission_id = telemetry.mission_id
+
+        if telemetry.reduced_accuracy:
+            participant.lifecycle_state = "degraded"
+            if previous_state != "degraded":
+                self.publish_event(
+                    "drone_degraded",
+                    telemetry.drone_id,
+                    f"Telemetry quality degraded while drone reported {telemetry.state}",
+                )
+            return
+
+        if telemetry.state == DroneState.REGISTERED.value:
+            participant.lifecycle_state = DroneState.REGISTERED.value
+            return
+
+        if telemetry.state in ACTIVE_TELEMETRY_STATES:
+            participant.lifecycle_state = "active"
+            if previous_state == "degraded":
+                self.publish_event(
+                    "drone_restored",
+                    telemetry.drone_id,
+                    f"Telemetry restored while drone reported {telemetry.state}",
+                )
+            return
+
+        if telemetry.state in INACTIVE_TELEMETRY_STATES:
+            participant.lifecycle_state = "inactive"
+            participant.active_mission_id = ""
+            if previous_state != "inactive":
+                self.publish_event(
+                    "drone_inactive",
+                    telemetry.drone_id,
+                    f"Drone became inactive after reporting {telemetry.state}",
+                )
+            return
+
     def _publish_zones(self):
         self.mqtt_client.publish(ZONE_UPDATE, self._zones_payload())
 
@@ -210,6 +334,7 @@ class AirspaceCore:
     def _handle_register(self, register_msg: RegisterMessage):
         with self._lock:
             if register_msg.drone_id in self.registry_machines:
+                self._refresh_registration(register_msg)
                 self.publish_event("re_register", register_msg.drone_id, "Duplicate registration treated as idempotent")
                 return
             machine = DroneRegistryMachine(self, register_msg)
@@ -218,6 +343,7 @@ class AirspaceCore:
 
     def _handle_telemetry(self, telemetry: TelemetryMessage):
         self.drones[telemetry.drone_id] = telemetry
+        self._update_lifecycle_from_telemetry(telemetry)
 
     def _handle_manned(self, telemetry: TelemetryMessage):
         self.manned[telemetry.drone_id] = telemetry
