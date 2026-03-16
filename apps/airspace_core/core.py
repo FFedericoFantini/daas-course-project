@@ -6,7 +6,7 @@ from dataclasses import dataclass
 import paho.mqtt.client as mqtt
 import stmpy
 
-from apps.airspace_core.mission import build_default_route, build_requested_route
+from apps.airspace_core.mission import build_default_route, build_requested_route, validate_activation_route
 from apps.airspace_core.rules import conflict_advisories, zone_advisories
 from shared.config import CONFLICT_CHECK_INTERVAL_MS, MQTT_BROKER_HOST, MQTT_BROKER_PORT
 from shared.models import ActivationStatus, DroneState
@@ -62,6 +62,10 @@ class ParticipantLifecycle:
     last_telemetry_at: float = 0.0
     last_reported_state: str = DroneState.OFFLINE.value
     active_mission_id: str = ""
+    last_activation_at: float = 0.0
+    last_activation_status: str = ""
+    last_event_at: float = 0.0
+    last_event_type: str = ""
     activation_count: int = 0
     registration_count: int = 0
     refresh_count: int = 0
@@ -190,6 +194,10 @@ class AirspaceCore:
 
     def publish_event(self, event_type: str, entity_id: str, details: str):
         event = AirspaceEvent(event_type=event_type, entity_id=entity_id, details=details)
+        participant = self.participants.get(entity_id)
+        if participant is not None:
+            participant.last_event_at = event.timestamp
+            participant.last_event_type = event_type
         self.events.insert(0, event)
         del self.events[100:]
         self.mqtt_client.publish(AIRSPACE_EVENT, event.to_json())
@@ -231,10 +239,14 @@ class AirspaceCore:
 
     def _record_activation(self, activation: ActivationMessage):
         participant = self._participant(activation.drone_id)
+        existing = self.activations.get(activation.drone_id)
         participant.lifecycle_state = "active"
         participant.active_mission_id = activation.mission_id
-        participant.activation_count += 1
+        participant.last_activation_at = activation.timestamp
+        participant.last_activation_status = activation.status
         participant.last_reported_state = DroneState.ACTIVATED.value
+        if existing is None or existing.mission_id != activation.mission_id:
+            participant.activation_count += 1
         self.activations[activation.drone_id] = activation
 
     def _create_activation_for_drone(self, drone_id: str, mission_counter: int) -> ActivationMessage:
@@ -244,8 +256,21 @@ class AirspaceCore:
         reason = "Mission assigned by airspace core"
 
         if request is not None:
-            route = build_requested_route(request.pickup, request.dropoff)
-            reason = "Mission assigned from planner request"
+            requested_route = build_requested_route(request.pickup, request.dropoff)
+            validation_error = validate_activation_route(requested_route)
+            if validation_error is None:
+                route = requested_route
+                reason = "Mission assigned from planner request"
+            else:
+                self.publish_event(
+                    "mission_route_fallback",
+                    drone_id,
+                    f"{validation_error}. Default route assigned instead.",
+                )
+
+        validation_error = validate_activation_route(route)
+        if validation_error is not None:
+            raise ValueError(f"Invalid activation route for {drone_id}: {validation_error}")
 
         return ActivationMessage(
             drone_id=drone_id,

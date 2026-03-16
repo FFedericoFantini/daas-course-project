@@ -47,6 +47,8 @@ def test_participant_lifecycle_tracks_registration_activation_and_telemetry():
     assert participant.lifecycle_state == "active"
     assert participant.active_mission_id == "drone-123-mission-000"
     assert participant.activation_count == 1
+    assert participant.last_activation_at == activation.timestamp
+    assert participant.last_activation_status == "approved"
     assert service.activations["drone-123"].mission_id == "drone-123-mission-000"
 
     degraded = TelemetryMessage(
@@ -101,6 +103,8 @@ def test_participant_lifecycle_tracks_registration_activation_and_telemetry():
     assert participant.lifecycle_state == "inactive"
     assert participant.active_mission_id == ""
     assert service.events[0].event_type == "drone_inactive"
+    assert participant.last_event_type == "drone_inactive"
+    assert participant.last_event_at == service.events[0].timestamp
 
 
 def test_duplicate_register_refreshes_metadata_without_creating_new_activation():
@@ -148,3 +152,4 @@ def test_duplicate_register_refreshes_metadata_without_creating_new_activation()
     assert participant.max_speed == 32.0
     assert service.activations["drone-dup"].mission_id == "drone-dup-mission-000"
     assert service.events[0].event_type == "re_register"
+    assert participant.last_event_type == "re_register"

@@ -59,3 +59,25 @@ def test_airspace_core_stores_manual_request_and_uses_requested_route():
     assert activation.route[-1].lon == 10.4100
     assert activation.reason == "Mission assigned from planner request"
     assert "planner-002" not in service.pending_mission_requests
+
+
+def test_invalid_requested_route_falls_back_to_default_route():
+    service = AirspaceCore()
+    service.mqtt_client = DummyMqttClient()
+
+    request = MissionRequestMessage(
+        drone_id="planner-003",
+        operator="planner-user",
+        drone_type="quadcopter",
+        pickup=Position(lat=63.4305, lon=10.3951, alt=0.0),
+        dropoff=Position(lat=63.4305001, lon=10.3951001, alt=0.0),
+        cruise_altitude=60.0,
+        max_speed=22.0,
+    )
+
+    service.pending_mission_requests[request.drone_id] = request
+    activation = service._create_activation_for_drone("planner-003", 0)
+
+    assert activation.reason == "Mission assigned by airspace core"
+    assert service.events[0].event_type == "mission_route_fallback"
+    assert activation.route[0].lat != request.pickup.lat or activation.route[-1].lon != request.dropoff.lon
