@@ -219,6 +219,40 @@ Canonical message schemas are defined in:
 - `Define Restricted Airspace Constraints` -> `apps/dashboard` + `apps/airspace_core`
 - `Monitor Active Airspace` -> `apps/dashboard`
 
+## Deployment Diagram
+
+The repository implementation follows the same deployment structure described in the final Spec V2.
+
+```mermaid
+flowchart LR
+    subgraph server["[device] DAAS Server (Raspberry Pi)"]
+        mqtt["[artifact] MQTT Broker"]
+        core["[artifact] ATC Core<br/>contains:<br/>- Drone Participation Manager (STM)<br/>- Conflict Resolution Controller (STM)<br/>- Constraint Handling Logic"]
+        dashapi["[artifact] Dashboard Backend / API"]
+    end
+
+    subgraph sim["[device] Drone Simulator Host"]
+        simrt["[artifact] Drone Simulator Runtime<br/>contains:<br/>- Autonomous Drone Sessions (STM)<br/>- Manual Drone Session (STM)"]
+    end
+
+    subgraph rpi["[device] Raspberry Pi w/ SenseHAT"]
+        sensor["[artifact] SenseHAT / Control Client"]
+    end
+
+    subgraph supervisor["[device] ATC / Supervisor Device"]
+        browser["[execution environment] Web Browser"]
+    end
+
+    server <-->|"[mqtt]"| sim
+    sim <-->|"[tcp]"| rpi
+    supervisor <-->|"[http] / SSE"| server
+```
+
+Reference files:
+
+- [Deployment diagram PDF](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/docs/diagrams/Deployment_Diagram_Team_18.pdf)
+- [Deployment diagram drawio source](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/docs/diagrams/Deployment_Diagram_Team_18.drawio)
+
 ## Minimal Local Run
 
 ### 1. Create a virtual environment
