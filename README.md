@@ -65,7 +65,7 @@ This package must stay stable because every other component depends on it.
 
 The repository is now organized to support a team of 6 people working from the final Spec V2.
 
-### Member 1: Airspace Core Lifecycle
+### Member 1: Federico - Airspace Core Lifecycle
 
 Own these files/folders:
 - [apps/airspace_core/core.py](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/apps/airspace_core/core.py)
@@ -77,7 +77,7 @@ Main focus:
 - mission assignment
 - airspace event publication for lifecycle changes
 
-### Member 2: Airspace Core Safety Logic
+### Member 2: Mats - Airspace Core Safety Logic
 
 Own these files/folders:
 - [apps/airspace_core/rules.py](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/apps/airspace_core/rules.py)
@@ -90,9 +90,9 @@ Main focus:
 - priority-rule behavior
 
 Note:
-- `core.py` remains primarily owned by Member 1; Member 2 only touches it when a reviewed integration change is needed.
+- `core.py` remains primarily owned by Federico; Mats only touches it when a reviewed integration change is needed.
 
-### Member 3: Drone Simulator
+### Member 3: Auslaug - Drone Simulator
 
 Own these files/folders:
 - [apps/drone_simulator/fleet.py](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/apps/drone_simulator/fleet.py)
@@ -104,7 +104,7 @@ Main focus:
 - mission progression
 - advisory execution
 
-### Member 4: Control Gateway / Raspberry Pi
+### Member 4: Isak - Control Gateway / Raspberry Pi
 
 Own these files/folders:
 - [apps/control_gateway/main.py](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/apps/control_gateway/main.py)
@@ -118,7 +118,7 @@ Main focus:
 - Raspberry Pi / SenseHAT integration
 - command forwarding to the manual drone
 
-### Member 5: Dashboard Backend
+### Member 5: Asne - Dashboard Backend
 
 Own these files/folders:
 - [apps/dashboard/main.py](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/apps/dashboard/main.py)
@@ -129,7 +129,7 @@ Main focus:
 - zone command API
 - backend aggregation for the operator view
 
-### Member 6: Dashboard Frontend and Demo Polish
+### Member 6: Jordan - Dashboard Frontend and Demo Polish
 
 Own these files/folders:
 - [apps/dashboard/templates/index.html](/C:/Users/fedef/OneDrive/Documenti/Playground/daas-course-project/apps/dashboard/templates/index.html)

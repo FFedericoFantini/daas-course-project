@@ -6,16 +6,16 @@ This split is designed for a team of 6 people working directly from the final Sp
 
 | Member | Ownership | Main files | Main responsibilities | Main dependencies |
 | --- | --- | --- | --- | --- |
-| 1 | Airspace Core Lifecycle | `apps/airspace_core/core.py`, `apps/airspace_core/mission.py` | registration, activation, mission assignment, lifecycle events | shared schemas/topics, simulator registration flow |
-| 2 | Airspace Core Safety Logic | `apps/airspace_core/rules.py`, `tests/test_rules.py` | conflict detection, advisory policy, restricted-zone behavior, priority logic | telemetry from simulator, event/advisory publish path in core |
-| 3 | Drone Simulator | `apps/drone_simulator/fleet.py`, `apps/drone_simulator/main.py` | autonomous drone state machines, mission execution, telemetry, advisory execution | activation and advisory topics |
-| 4 | Control Gateway / Raspberry Pi | `apps/control_gateway/main.py` plus new gateway client files | SenseHAT or keyboard control input, TCP/HTTP forwarding, manual drone integration | control topic contract, simulator manual drone path |
-| 5 | Dashboard Backend | `apps/dashboard/main.py` | snapshot endpoint, SSE stream, zone command API, backend aggregation | MQTT topics, zone command contract |
-| 6 | Dashboard Frontend and Demo Polish | `apps/dashboard/templates/index.html`, `apps/dashboard/static/map.js`, `apps/dashboard/static/style.css`, `docs/` | UI readability, map rendering, event visibility, zone presentation, final demo polish | dashboard backend responses |
+| 1 - Federico | Airspace Core Lifecycle | `apps/airspace_core/core.py`, `apps/airspace_core/mission.py` | registration, activation, mission assignment, lifecycle events | shared schemas/topics, simulator registration flow |
+| 2 - Mats | Airspace Core Safety Logic | `apps/airspace_core/rules.py`, `tests/test_rules.py` | conflict detection, advisory policy, restricted-zone behavior, priority logic | telemetry from simulator, event/advisory publish path in core |
+| 3 - Auslaug | Drone Simulator | `apps/drone_simulator/fleet.py`, `apps/drone_simulator/main.py` | autonomous drone state machines, mission execution, telemetry, advisory execution | activation and advisory topics |
+| 4 - Isak | Control Gateway / Raspberry Pi | `apps/control_gateway/main.py` plus new gateway client files | SenseHAT or keyboard control input, TCP/HTTP forwarding, manual drone integration | control topic contract, simulator manual drone path |
+| 5 - Asne | Dashboard Backend | `apps/dashboard/main.py` | snapshot endpoint, SSE stream, zone command API, backend aggregation | MQTT topics, zone command contract |
+| 6 - Jordan | Dashboard Frontend and Demo Polish | `apps/dashboard/templates/index.html`, `apps/dashboard/static/map.js`, `apps/dashboard/static/style.css`, `docs/` | UI readability, map rendering, event visibility, zone presentation, final demo polish | dashboard backend responses |
 
 ## Role Details
 
-### Member 1: Airspace Core Lifecycle
+### Member 1: Federico - Airspace Core Lifecycle
 
 Main tasks:
 
@@ -30,7 +30,7 @@ Must not own:
 - dashboard rendering
 - Raspberry Pi integration
 
-### Member 2: Airspace Core Safety Logic
+### Member 2: Mats - Airspace Core Safety Logic
 
 Main tasks:
 
@@ -47,10 +47,10 @@ Must not own:
 
 Important rule:
 
-- Member 1 is the primary owner of `core.py`
-- Member 2 should only touch `core.py` for agreed integration points
+- Federico is the primary owner of `core.py`
+- Mats should only touch `core.py` for agreed integration points
 
-### Member 3: Drone Simulator
+### Member 3: Auslaug - Drone Simulator
 
 Main tasks:
 
@@ -64,7 +64,7 @@ Must not own:
 - global conflict policy
 - dashboard aggregation
 
-### Member 4: Control Gateway / Raspberry Pi
+### Member 4: Isak - Control Gateway / Raspberry Pi
 
 Main tasks:
 
@@ -79,7 +79,7 @@ Must not own:
 - zone logic
 - dashboard rendering
 
-### Member 5: Dashboard Backend
+### Member 5: Asne - Dashboard Backend
 
 Main tasks:
 
@@ -94,7 +94,7 @@ Must not own:
 - frontend map design decisions
 - airspace decision logic
 
-### Member 6: Dashboard Frontend and Demo Polish
+### Member 6: Jordan - Dashboard Frontend and Demo Polish
 
 Main tasks:
 

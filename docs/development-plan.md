@@ -41,7 +41,7 @@ Use this split if you have six people.
 
 Owner:
 
-- Member 1
+- Federico
 
 Own files:
 
@@ -73,7 +73,7 @@ Definition of done:
 
 Owner:
 
-- Member 2
+- Mats
 
 Own files:
 
@@ -93,7 +93,7 @@ Concrete tasks:
 1. Improve conflict handling so it matches the Spec V2 state machine more closely.
 2. Keep zone and conflict logic centralized in `rules.py`.
 3. Add tests for edge cases in advisory and zone behavior.
-4. Coordinate with Member 1 for any required integration hook inside `core.py`.
+4. Coordinate with Federico for any required integration hook inside `core.py`.
 
 Definition of done:
 
@@ -105,7 +105,7 @@ Definition of done:
 
 Owner:
 
-- Member 3
+- Auslaug
 
 Own files:
 
@@ -136,7 +136,7 @@ Definition of done:
 
 Owner:
 
-- Member 4
+- Isak
 
 Own files:
 
@@ -160,7 +160,7 @@ Concrete tasks:
 2. Keep the TCP control bridge stable.
 3. Build a Raspberry Pi client that reads keyboard input, SenseHAT joystick, or accelerometer input.
 4. Convert those inputs into `heading_delta`, `throttle_delta`, and `speed_delta`.
-5. Coordinate with Member 3 to validate the manual drone path end to end.
+5. Coordinate with Auslaug to validate the manual drone path end to end.
 
 Definition of done:
 
@@ -172,7 +172,7 @@ Definition of done:
 
 Owner:
 
-- Member 5
+- Asne
 
 Own files:
 
@@ -202,7 +202,7 @@ Definition of done:
 
 Owner:
 
-- Member 6
+- Jordan
 
 Own files:
 
