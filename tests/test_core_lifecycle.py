@@ -102,9 +102,29 @@ def test_participant_lifecycle_tracks_registration_activation_and_telemetry():
     participant = service.participants["drone-123"]
     assert participant.lifecycle_state == "inactive"
     assert participant.active_mission_id == ""
-    assert service.events[0].event_type == "drone_inactive"
-    assert participant.last_event_type == "drone_inactive"
+    assert participant.completed_mission_count == 1
+    assert participant.last_completed_mission_id == "drone-123-mission-000"
+    assert participant.last_terminal_state == "completed"
+    assert service.events[0].event_type == "mission_completed"
+    assert participant.last_event_type == "mission_completed"
     assert participant.last_event_at == service.events[0].timestamp
+
+    idle = TelemetryMessage(
+        drone_id="drone-123",
+        timestamp=23.0,
+        position=Position(lat=63.432, lon=10.392, alt=0.0),
+        heading=0.0,
+        speed=0.0,
+        vertical_speed=0.0,
+        state="idle",
+        battery=97.8,
+        mission_id="drone-123-mission-000",
+    )
+    service._handle_telemetry(idle)
+
+    participant = service.participants["drone-123"]
+    assert participant.completed_mission_count == 1
+    assert service.events[0].event_type == "mission_completed"
 
 
 def test_duplicate_register_refreshes_metadata_without_creating_new_activation():
@@ -153,3 +173,37 @@ def test_duplicate_register_refreshes_metadata_without_creating_new_activation()
     assert service.activations["drone-dup"].mission_id == "drone-dup-mission-000"
     assert service.events[0].event_type == "re_register"
     assert participant.last_event_type == "re_register"
+
+
+def test_aborted_mission_generates_terminal_event_once():
+    service = AirspaceCore()
+    service.mqtt_client = DummyMqttClient()
+
+    activation = ActivationMessage(
+        drone_id="drone-abort",
+        status="approved",
+        mission_id="drone-abort-mission-000",
+        route=[Position(lat=63.43, lon=10.39, alt=0.0), Position(lat=63.44, lon=10.40, alt=60.0)],
+    )
+    service._record_activation(activation)
+
+    aborted = TelemetryMessage(
+        drone_id="drone-abort",
+        timestamp=30.0,
+        position=Position(lat=63.432, lon=10.392, alt=12.0),
+        heading=0.0,
+        speed=0.0,
+        vertical_speed=-1.0,
+        state="aborted",
+        battery=97.0,
+        mission_id="drone-abort-mission-000",
+    )
+    service._handle_telemetry(aborted)
+    service._handle_telemetry(aborted)
+
+    participant = service.participants["drone-abort"]
+    assert participant.lifecycle_state == "inactive"
+    assert participant.completed_mission_count == 1
+    assert participant.last_completed_mission_id == "drone-abort-mission-000"
+    assert participant.last_terminal_state == "aborted"
+    assert service.events[0].event_type == "mission_aborted"

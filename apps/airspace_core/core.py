@@ -66,6 +66,10 @@ class ParticipantLifecycle:
     last_activation_status: str = ""
     last_event_at: float = 0.0
     last_event_type: str = ""
+    completed_mission_count: int = 0
+    last_completed_mission_id: str = ""
+    last_completed_at: float = 0.0
+    last_terminal_state: str = ""
     activation_count: int = 0
     registration_count: int = 0
     refresh_count: int = 0
@@ -309,6 +313,25 @@ class AirspaceCore:
         participant.last_reported_state = DroneState.IDLE.value
         self.publish_event("drone_inactive", drone_id, details)
 
+    def _finalize_mission_from_telemetry(self, telemetry: TelemetryMessage):
+        participant = self._participant(telemetry.drone_id)
+        mission_id = telemetry.mission_id or participant.active_mission_id
+        event_type = "mission_completed" if telemetry.state == DroneState.COMPLETED.value else "mission_aborted"
+
+        if mission_id and participant.last_completed_mission_id != mission_id:
+            participant.completed_mission_count += 1
+            participant.last_completed_mission_id = mission_id
+            participant.last_completed_at = telemetry.timestamp
+            participant.last_terminal_state = telemetry.state
+            self.publish_event(
+                event_type,
+                telemetry.drone_id,
+                f"Mission {mission_id} reached terminal state {telemetry.state}",
+            )
+
+        participant.lifecycle_state = "inactive"
+        participant.active_mission_id = ""
+
     def _update_lifecycle_from_telemetry(self, telemetry: TelemetryMessage):
         participant = self._participant(telemetry.drone_id)
         previous_state = participant.lifecycle_state
@@ -339,6 +362,10 @@ class AirspaceCore:
                     telemetry.drone_id,
                     f"Telemetry restored while drone reported {telemetry.state}",
                 )
+            return
+
+        if telemetry.state in {DroneState.COMPLETED.value, DroneState.ABORTED.value}:
+            self._finalize_mission_from_telemetry(telemetry)
             return
 
         if telemetry.state in INACTIVE_TELEMETRY_STATES:
