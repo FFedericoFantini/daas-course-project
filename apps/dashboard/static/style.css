@@ -99,6 +99,9 @@ body {
 .drone-marker {
     background: transparent;
     border: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .drone-dot {

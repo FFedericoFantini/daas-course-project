@@ -27,8 +27,8 @@ function droneIcon(state) {
     return L.divIcon({
         className: "drone-marker",
         html: `<div class="drone-dot" style="background:${color}"></div>`,
-        iconSize: [18, 18],
-        iconAnchor: [9, 9],
+        iconSize: [40, 40],
+        iconAnchor: [20, 20],
     });
 }
 
