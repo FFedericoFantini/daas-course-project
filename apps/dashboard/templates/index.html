@@ -26,6 +26,73 @@
                 <section class="panel">
                     <div class="panel-heading">
                         <div>
+                            <h2>Mission Request</h2>
+                            <p>Select pickup and dropoff points on the main map, then request a new drone mission.</p>
+                        </div>
+                    </div>
+
+                    <form id="mission-form" class="zone-form">
+                        <div class="field-row">
+                            <label>
+                                Drone ID
+                                <input id="mission-drone-id" type="text" placeholder="drone-manual-001" required>
+                            </label>
+                            <label>
+                                Operator
+                                <input id="mission-operator" type="text" value="planner">
+                            </label>
+                        </div>
+                        <div class="field-row">
+                            <label>
+                                Drone type
+                                <input id="mission-drone-type" type="text" value="quadcopter">
+                            </label>
+                            <label>
+                                Cruise altitude (m)
+                                <input id="mission-cruise-altitude" type="number" min="10" step="10" value="60">
+                            </label>
+                        </div>
+                        <div class="field-row">
+                            <label>
+                                Max speed (m/s)
+                                <input id="mission-max-speed" type="number" min="1" step="0.5" value="25">
+                            </label>
+                        </div>
+
+                        <div class="field-row">
+                            <label>
+                                Pickup lat
+                                <input id="mission-pickup-lat" type="number" step="0.000001" readonly required>
+                            </label>
+                            <label>
+                                Pickup lon
+                                <input id="mission-pickup-lon" type="number" step="0.000001" readonly required>
+                            </label>
+                        </div>
+                        <div class="field-row">
+                            <label>
+                                Dropoff lat
+                                <input id="mission-dropoff-lat" type="number" step="0.000001" readonly required>
+                            </label>
+                            <label>
+                                Dropoff lon
+                                <input id="mission-dropoff-lon" type="number" step="0.000001" readonly required>
+                            </label>
+                        </div>
+
+                        <div class="actions">
+                            <button id="mission-pick" class="secondary" type="button">Pick on map</button>
+                            <button class="primary" type="submit">Request mission</button>
+                            <button id="mission-reset" class="ghost" type="button">Reset</button>
+                        </div>
+                    </form>
+
+                    <div id="mission-status" class="zone-status">Pick on map to place the pickup point, then the dropoff point.</div>
+                </section>
+
+                <section class="panel">
+                    <div class="panel-heading">
+                        <div>
                             <h2>Airspace Events</h2>
                             <p>Latest safety updates from the live airspace feed.</p>
                         </div>

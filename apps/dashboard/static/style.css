@@ -210,6 +210,11 @@ button {
     outline: 2px solid rgba(24, 139, 104, 0.32);
 }
 
+.ghost {
+    background: #edf3ef;
+    color: #355245;
+}
+
 .danger {
     background: #f0d8d5;
     color: var(--danger-dark);

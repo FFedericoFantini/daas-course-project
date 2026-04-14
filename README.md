@@ -277,20 +277,20 @@ Or use:
 ## Main URLs
 
 - Monitoring Dashboard: [http://127.0.0.1:5001](http://127.0.0.1:5001)
-- Mission Planner Dashboard: [http://127.0.0.1:5001/planner](http://127.0.0.1:5001/planner)
 - Control Gateway API: [http://127.0.0.1:5002](http://127.0.0.1:5002)
 
-## Mission Planner Dashboard
+## Mission Request on the Main Dashboard
 
-The repository now includes a second dashboard page dedicated to manual mission creation.
+The main dashboard now includes mission creation directly in the operator view.
 
 Planner flow:
 
-- open [http://127.0.0.1:5001/planner](http://127.0.0.1:5001/planner)
+- open [http://127.0.0.1:5001](http://127.0.0.1:5001)
 - choose a unique `drone_id`
+- use `Mission Request` and click `Pick on map`
 - click the map once for the pickup point
 - click the map again for the dropoff point
-- submit the mission request
+- submit the mission request from the same page
 
 What happens next:
 

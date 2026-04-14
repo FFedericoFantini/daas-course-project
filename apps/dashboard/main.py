@@ -92,11 +92,6 @@ def index():
     return render_template("index.html")
 
 
-@app.route("/planner")
-def planner():
-    return render_template("planner.html")
-
-
 @app.route("/api/snapshot")
 def snapshot():
     with state_lock:

@@ -13,10 +13,20 @@ The dashboard should show:
 - the live connection status
 - active drone count
 - total event count
+- a mission request panel on the main dashboard
 - drone markers with heading, altitude, and state tooltips
 - green flight trails for recent drone movement
 - red no-fly zone circles on the map
 - the event panel with advisory and zone events highlighted
+
+## Mission Request Flow
+
+1. In the `Mission Request` panel, click `Pick on map`.
+2. Click once for the pickup point and again for the dropoff point.
+3. Fill in a unique drone ID and adjust the mission settings if needed.
+4. Click `Request mission`.
+5. Wait for the planner flow to publish the new mission request.
+6. Confirm the mission overlay appears on the map and the new drone starts showing up once telemetry arrives.
 
 ## No-fly Zone Flow
 

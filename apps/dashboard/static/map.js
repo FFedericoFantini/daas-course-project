@@ -28,6 +28,24 @@ const zoneLonInput = document.getElementById("zone-lon");
 const zonePickButton = document.getElementById("zone-pick");
 const zoneStatus = document.getElementById("zone-status");
 const zoneList = document.getElementById("zone-list");
+const missionForm = document.getElementById("mission-form");
+const missionPickButton = document.getElementById("mission-pick");
+const missionResetButton = document.getElementById("mission-reset");
+const missionStatus = document.getElementById("mission-status");
+const missionDroneIdInput = document.getElementById("mission-drone-id");
+const missionOperatorInput = document.getElementById("mission-operator");
+const missionDroneTypeInput = document.getElementById("mission-drone-type");
+const missionCruiseAltitudeInput = document.getElementById("mission-cruise-altitude");
+const missionMaxSpeedInput = document.getElementById("mission-max-speed");
+const missionPickupLatInput = document.getElementById("mission-pickup-lat");
+const missionPickupLonInput = document.getElementById("mission-pickup-lon");
+const missionDropoffLatInput = document.getElementById("mission-dropoff-lat");
+const missionDropoffLonInput = document.getElementById("mission-dropoff-lon");
+let isPickingMission = false;
+let missionSelectionStage = "pickup";
+let draftMissionPickupMarker = null;
+let draftMissionDropoffMarker = null;
+let draftMissionLine = null;
 
 function setStatus(isConnected) {
     const element = document.getElementById("live-status");
@@ -212,6 +230,11 @@ function setZoneStatus(message, ok = true) {
     zoneStatus.className = `zone-status ${ok ? "ok" : "bad"}`;
 }
 
+function setMissionStatus(message, ok = true) {
+    missionStatus.textContent = message;
+    missionStatus.className = `zone-status ${ok ? "ok" : "bad"}`;
+}
+
 function zonePayloadFromForm() {
     const lat = Number(zoneLatInput.value);
     const lon = Number(zoneLonInput.value);
@@ -254,6 +277,11 @@ function updateDraftZone() {
     draftZoneLayer.bindTooltip("Draft no-fly zone", { permanent: false, sticky: true });
 }
 
+function setFieldPair(latInput, lonInput, latlng) {
+    latInput.value = latlng.lat.toFixed(6);
+    lonInput.value = latlng.lng.toFixed(6);
+}
+
 function setDraftCenter(latlng) {
     zoneLatInput.value = latlng.lat.toFixed(6);
     zoneLonInput.value = latlng.lng.toFixed(6);
@@ -261,6 +289,91 @@ function setDraftCenter(latlng) {
     isPickingZone = false;
     zonePickButton.classList.remove("active");
     setZoneStatus("Center selected. Adjust the radius if needed, then publish the zone.", true);
+}
+
+function clearDraftMissionLayers() {
+    if (draftMissionPickupMarker) {
+        draftMissionPickupMarker.remove();
+        draftMissionPickupMarker = null;
+    }
+    if (draftMissionDropoffMarker) {
+        draftMissionDropoffMarker.remove();
+        draftMissionDropoffMarker = null;
+    }
+    if (draftMissionLine) {
+        draftMissionLine.remove();
+        draftMissionLine = null;
+    }
+}
+
+function resetMissionDraft(keepStatus = false) {
+    clearDraftMissionLayers();
+    missionPickupLatInput.value = "";
+    missionPickupLonInput.value = "";
+    missionDropoffLatInput.value = "";
+    missionDropoffLonInput.value = "";
+    missionSelectionStage = "pickup";
+    isPickingMission = false;
+    missionPickButton.classList.remove("active");
+    if (!keepStatus) {
+        setMissionStatus("Pick on map to place the pickup point, then the dropoff point.", true);
+    }
+}
+
+function startMissionPicking() {
+    isPickingMission = true;
+    isPickingZone = false;
+    zonePickButton.classList.remove("active");
+    missionPickButton.classList.add("active");
+    if (missionSelectionStage === "done") {
+        missionSelectionStage = "pickup";
+    }
+    const stepMessage = missionSelectionStage === "pickup"
+        ? "Click the map to place the pickup point."
+        : "Click the map to place the dropoff point.";
+    setMissionStatus(stepMessage, true);
+}
+
+function handleMissionMapClick(latlng) {
+    if (missionSelectionStage === "pickup") {
+        clearDraftMissionLayers();
+        draftMissionPickupMarker = L.marker(latlng).addTo(map).bindTooltip("Pickup", {
+            permanent: true,
+            direction: "top",
+            offset: [0, -8],
+        });
+        setFieldPair(missionPickupLatInput, missionPickupLonInput, latlng);
+        missionSelectionStage = "dropoff";
+        setMissionStatus("Pickup point set. Click again to place the dropoff point.", true);
+        return;
+    }
+
+    if (missionSelectionStage !== "dropoff" || !draftMissionPickupMarker) {
+        return;
+    }
+
+    if (draftMissionDropoffMarker) {
+        draftMissionDropoffMarker.remove();
+    }
+    draftMissionDropoffMarker = L.marker(latlng).addTo(map).bindTooltip("Dropoff", {
+        permanent: true,
+        direction: "top",
+        offset: [0, -8],
+    });
+    setFieldPair(missionDropoffLatInput, missionDropoffLonInput, latlng);
+
+    if (draftMissionLine) {
+        draftMissionLine.remove();
+    }
+    draftMissionLine = L.polyline(
+        [draftMissionPickupMarker.getLatLng(), latlng],
+        { color: "#1b7f5a", weight: 3, opacity: 0.85, dashArray: "8 6" }
+    ).addTo(map);
+
+    missionSelectionStage = "done";
+    isPickingMission = false;
+    missionPickButton.classList.remove("active");
+    setMissionStatus("Pickup and dropoff selected. You can now request the mission.", true);
 }
 
 function projectTelemetryPosition(tel) {
@@ -308,16 +421,38 @@ async function bootstrap() {
 map.on("click", (event) => {
     if (isPickingZone) {
         setDraftCenter(event.latlng);
+        return;
+    }
+    if (isPickingMission) {
+        handleMissionMapClick(event.latlng);
     }
 });
 
 zonePickButton.addEventListener("click", () => {
     isPickingZone = !isPickingZone;
+    if (isPickingZone) {
+        isPickingMission = false;
+        missionPickButton.classList.remove("active");
+    }
     zonePickButton.classList.toggle("active", isPickingZone);
     setZoneStatus(isPickingZone ? "Click the map to place the center of the no-fly zone." : "Zone picking cancelled.", true);
 });
 
 zoneRadiusInput.addEventListener("input", updateDraftZone);
+
+missionPickButton.addEventListener("click", () => {
+    if (isPickingMission) {
+        isPickingMission = false;
+        missionPickButton.classList.remove("active");
+        setMissionStatus("Mission picking cancelled.", true);
+        return;
+    }
+    startMissionPicking();
+});
+
+missionResetButton.addEventListener("click", () => {
+    resetMissionDraft();
+});
 
 zoneForm.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -349,6 +484,58 @@ zoneForm.addEventListener("submit", async (event) => {
         }
     } catch (error) {
         setZoneStatus(error.message || "Zone publish failed.", false);
+    }
+});
+
+missionForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    if (!missionPickupLatInput.value || !missionDropoffLatInput.value) {
+        setMissionStatus("Pick both pickup and dropoff points on the map before submitting.", false);
+        return;
+    }
+
+    const payload = {
+        drone_id: missionDroneIdInput.value.trim(),
+        operator: missionOperatorInput.value.trim() || "planner",
+        drone_type: missionDroneTypeInput.value.trim() || "quadcopter",
+        cruise_altitude: Number(missionCruiseAltitudeInput.value || 60),
+        max_speed: Number(missionMaxSpeedInput.value || 25),
+        pickup: {
+            lat: Number(missionPickupLatInput.value),
+            lon: Number(missionPickupLonInput.value),
+            alt: 0,
+        },
+        dropoff: {
+            lat: Number(missionDropoffLatInput.value),
+            lon: Number(missionDropoffLonInput.value),
+            alt: 0,
+        },
+    };
+
+    if (!payload.drone_id) {
+        setMissionStatus("Drone ID is required.", false);
+        return;
+    }
+
+    try {
+        const response = await fetch("/api/mission-requests", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+        });
+        const result = await response.json();
+        if (!response.ok || !result.ok) {
+            throw new Error(result.error || "Mission request failed");
+        }
+        setMissionStatus(`Mission request queued for ${result.drone_id}.`, true);
+        missionForm.reset();
+        missionOperatorInput.value = "planner";
+        missionDroneTypeInput.value = "quadcopter";
+        missionCruiseAltitudeInput.value = "60";
+        missionMaxSpeedInput.value = "25";
+        resetMissionDraft(true);
+    } catch (error) {
+        setMissionStatus(error.message || "Mission request failed.", false);
     }
 });
 
