@@ -9,9 +9,10 @@ import stmpy
 from apps.airspace_core.mission import build_default_route, build_requested_route, validate_activation_route
 from apps.airspace_core.rules import conflict_advisories, zone_advisories
 from shared.config import CONFLICT_CHECK_INTERVAL_MS, MQTT_BROKER_HOST, MQTT_BROKER_PORT
-from shared.models import ActivationStatus, DroneState
+from shared.models import ActivationStatus, AdvisoryType, AdvisorySeverity, DroneState
 from shared.schemas import (
     ActivationMessage,
+    AdvisoryMessage,
     AirspaceEvent,
     MissionRequestMessage,
     RegisterMessage,
@@ -131,8 +132,22 @@ class ConflictMonitorMachine:
         advisories = []
         advisories.extend(zone_advisories(self.service.drones, self.service.zones))
         advisories.extend(conflict_advisories(self.service.drones, self.service.manned))
+        active_now = {advisory.drone_id for advisory in advisories}
+        previously_active = set(self.service.active_advisories.keys())
         for advisory in advisories:
             self.service.publish_advisory(advisory)
+        for drone_id in previously_active - active_now:
+            clear_advisory = AdvisoryMessage(
+                drone_id=drone_id,
+                advisory_type=AdvisoryType.CLEAR_OF_CONFLICT.value,
+                severity=AdvisorySeverity.WARNING.value,
+                threat_id="",
+                details="Conflict clear: return to nominal route and altitude",
+            )
+            self.service.publish_advisory(clear_advisory)
+        self.service.active_advisories = defaultdict(list)
+        for advisory in advisories:
+            self.service.active_advisories[advisory.drone_id].append(advisory.threat_id)
         self.schedule()
 
 
@@ -163,20 +178,7 @@ class AirspaceCore:
         self._lock = threading.Lock()
 
     def _default_zones(self) -> list[Zone]:
-        from shared.config import DEFAULT_CENTER_LAT, DEFAULT_CENTER_LON
-        from shared.schemas import Position
-
-        return [
-            Zone(
-                zone_id="hospital-helipad",
-                name="Hospital Helipad Priority Zone",
-                center=Position(lat=DEFAULT_CENTER_LAT + 0.01, lon=DEFAULT_CENTER_LON - 0.01, alt=60),
-                radius_m=250,
-                min_alt_m=0,
-                max_alt_m=150,
-                restricted=True,
-            )
-        ]
+        return []
 
     def next_route_index(self) -> int:
         current = self.route_index

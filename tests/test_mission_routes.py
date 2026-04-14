@@ -26,6 +26,20 @@ def test_first_blueprint_cycle_produces_distinct_routes():
     assert len(ends) == len(ROUTE_BLUEPRINTS)
 
 
+def test_first_blueprint_cycle_uses_common_center_waypoint():
+    first_cycle = [build_default_route(index) for index in range(len(ROUTE_BLUEPRINTS))]
+    center_points = {(route[1].lat, route[1].lon, route[1].alt) for route in first_cycle}
+
+    assert len(center_points) == 1
+
+
+def test_first_blueprint_cycle_starts_at_same_radius_from_center():
+    first_cycle = [build_default_route(index) for index in range(len(ROUTE_BLUEPRINTS))]
+    start_distances = [distance_from_center(route[0]) for route in first_cycle]
+
+    assert max(start_distances) - min(start_distances) < 1.0
+
+
 def test_later_route_cycles_stay_deterministic_but_move_inward():
     outer = build_default_route(0)
     inner = build_default_route(len(ROUTE_BLUEPRINTS))

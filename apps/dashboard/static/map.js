@@ -73,13 +73,18 @@ function formatTime(timestamp) {
     });
 }
 
-function droneIcon(state) {
+function droneIcon(state, altitude) {
     const color = state === "evading" ? "#d86c1e" : state === "airborne" ? "#188b68" : "#50635a";
     return L.divIcon({
         className: "drone-marker",
-        html: `<div class="drone-dot" style="background:${color}"></div>`,
-        iconSize: [40, 40],
-        iconAnchor: [20, 20],
+        html: `
+            <div class="drone-stack">
+                <div class="drone-altitude">${Math.round(altitude)}m</div>
+                <div class="drone-dot" style="background:${color}"></div>
+            </div>
+        `,
+        iconSize: [54, 54],
+        iconAnchor: [27, 27],
     });
 }
 
@@ -108,7 +113,7 @@ function updateDrone(tel) {
     droneTelemetry[tel.drone_id] = tel;
 
     if (!droneMarkers[tel.drone_id]) {
-        droneMarkers[tel.drone_id] = L.marker(latLng, { icon: droneIcon(tel.state) }).addTo(map);
+        droneMarkers[tel.drone_id] = L.marker(latLng, { icon: droneIcon(tel.state, tel.position.alt) }).addTo(map);
         droneTrails[tel.drone_id] = L.polyline([], {
             color: "#188b68",
             weight: 3,
@@ -118,7 +123,7 @@ function updateDrone(tel) {
         }).addTo(map);
     }
 
-    droneMarkers[tel.drone_id].setIcon(droneIcon(tel.state));
+    droneMarkers[tel.drone_id].setIcon(droneIcon(tel.state, tel.position.alt));
     droneMarkers[tel.drone_id].bindTooltip(
         `<strong>${escapeHtml(tel.drone_id)}</strong><br>State: ${escapeHtml(tel.state)}<br>Alt: ${tel.position.alt.toFixed(0)}m<br>Hdg: ${tel.heading.toFixed(0)}&deg;`
     );

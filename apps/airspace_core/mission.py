@@ -33,6 +33,12 @@ def _build_position(dx_m: float, dy_m: float, alt_m: float) -> Position:
     )
 
 
+def _scale_to_radius(dx: float, dy: float, radius_m: float) -> tuple[float, float]:
+    magnitude = max(1e-6, (dx * dx + dy * dy) ** 0.5)
+    scale = radius_m / magnitude
+    return dx * scale, dy * scale
+
+
 def build_default_route(offset_index: int) -> list[Position]:
     blueprint_index = offset_index % len(ROUTE_BLUEPRINTS)
     ring_index = offset_index // len(ROUTE_BLUEPRINTS)
@@ -40,9 +46,12 @@ def build_default_route(offset_index: int) -> list[Position]:
     route_radius_m = DEFAULT_AIRSPACE_RADIUS_M * DEFAULT_ROUTE_RADIUS_FACTOR * scale
 
     start_dx, start_dy, end_dx, end_dy = ROUTE_BLUEPRINTS[blueprint_index]
-    start = _build_position(start_dx * route_radius_m, start_dy * route_radius_m, 0.0)
-    end = _build_position(end_dx * route_radius_m, end_dy * route_radius_m, DEFAULT_CRUISE_ALTITUDE_M)
-    return [start, end]
+    start_offset_x, start_offset_y = _scale_to_radius(start_dx, start_dy, route_radius_m)
+    end_offset_x, end_offset_y = _scale_to_radius(end_dx, end_dy, route_radius_m)
+    start = _build_position(start_offset_x, start_offset_y, 0.0)
+    center = _build_position(0.0, 0.0, DEFAULT_CRUISE_ALTITUDE_M)
+    end = _build_position(end_offset_x, end_offset_y, DEFAULT_CRUISE_ALTITUDE_M)
+    return [start, center, end]
 
 
 def build_requested_route(pickup: Position, dropoff: Position) -> list[Position]:
