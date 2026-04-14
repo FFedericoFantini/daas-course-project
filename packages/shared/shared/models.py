@@ -8,6 +8,7 @@ class DroneState(str, Enum):
     ACTIVATED = "activated"
     TAKEOFF = "takeoff"
     AIRBORNE = "airborne"
+    MANUAL = "manual"
     EVADING = "evading"
     LANDING = "landing"
     COMPLETED = "completed"

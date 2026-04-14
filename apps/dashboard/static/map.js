@@ -11,6 +11,7 @@ L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
 const droneMarkers = {};
 const droneTrails = {};
 const droneTelemetry = {};
+const missionMarkers = {};
 const zoneLayers = {};
 let eventCount = 0;
 const MAX_PROJECTION_S = 0.35;
@@ -23,22 +24,11 @@ function setStatus(isConnected) {
 
 function droneIcon(state) {
     const color = state === "evading" ? "#d86c1e" : state === "airborne" ? "#188b68" : "#50635a";
-    const glow = state === "evading" ? "rgba(216,108,30,0.30)" : "rgba(24,139,104,0.24)";
     return L.divIcon({
         className: "drone-marker",
-        html: `
-            <div class="drone-shell">
-                <svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true">
-                    <circle cx="15" cy="15" r="11" fill="${glow}" />
-                    <g class="drone-rotor">
-                        <path d="M15 3 L22 23 L15 19 L8 23 Z" fill="${color}" stroke="#ffffff" stroke-width="1.1" stroke-linejoin="round" />
-                        <circle cx="15" cy="15" r="3.6" fill="#ffffff" opacity="0.95" />
-                        <circle cx="15" cy="15" r="1.8" fill="${color}" />
-                    </g>
-                </svg>
-            </div>`,
-        iconSize: [30, 30],
-        iconAnchor: [15, 15],
+        html: `<div class="drone-dot" style="background:${color}"></div>`,
+        iconSize: [18, 18],
+        iconAnchor: [9, 9],
     });
 }
 
@@ -82,6 +72,54 @@ function updateDrone(tel) {
     document.getElementById("drone-count").textContent = `Drones: ${Object.keys(droneMarkers).length}`;
 }
 
+function updateActivation(activation) {
+    if (!activation.route || activation.route.length === 0) {
+        return;
+    }
+    const droneId = activation.drone_id;
+    const start = activation.route[0];
+    const destination = activation.route[activation.route.length - 1];
+
+    if (missionMarkers[droneId]) {
+        missionMarkers[droneId].pickup.setLatLng([start.lat, start.lon]);
+        missionMarkers[droneId].dropoff.setLatLng([destination.lat, destination.lon]);
+        missionMarkers[droneId].path.setLatLngs(
+            activation.route.map((point) => [point.lat, point.lon])
+        );
+        return;
+    }
+
+    const pickup = L.circleMarker([start.lat, start.lon], {
+        radius: 9,
+        color: "#ffffff",
+        weight: 2,
+        fillColor: "#2563eb",
+        fillOpacity: 0.95,
+    })
+        .bindTooltip(`${droneId} pickup`, { permanent: true, direction: "top", offset: [0, -8] })
+        .addTo(map);
+    const dropoff = L.circleMarker([destination.lat, destination.lon], {
+        radius: 9,
+        color: "#ffffff",
+        weight: 2,
+        fillColor: "#b45309",
+        fillOpacity: 0.95,
+    })
+        .bindTooltip(`${droneId} drop`, { permanent: true, direction: "top", offset: [0, -8] })
+        .addTo(map);
+    const path = L.polyline(
+        activation.route.map((point) => [point.lat, point.lon]),
+        {
+            color: "#6b7280",
+            weight: 2,
+            opacity: 0.55,
+            dashArray: "8 6",
+        }
+    ).addTo(map);
+
+    missionMarkers[droneId] = { pickup, dropoff, path };
+}
+
 function updateZones(zones) {
     Object.values(zoneLayers).forEach((layer) => layer.remove());
     zones.forEach((zone) => {
@@ -116,14 +154,6 @@ function animateDrones() {
             return;
         }
         marker.setLatLng(projectTelemetryPosition(tel));
-        const element = marker.getElement();
-        if (element) {
-            const rotor = element.querySelector(".drone-rotor");
-            if (rotor) {
-                rotor.style.transformOrigin = "15px 15px";
-                rotor.style.transform = `rotate(${tel.heading}deg)`;
-            }
-        }
     });
 
     requestAnimationFrame(animateDrones);
@@ -133,12 +163,14 @@ async function bootstrap() {
     const response = await fetch("/api/snapshot");
     const snapshot = await response.json();
     snapshot.drones.forEach(updateDrone);
+    Object.values(snapshot.activations || {}).forEach(updateActivation);
     snapshot.events.slice().reverse().forEach(addEvent);
     updateZones(snapshot.zones || []);
 
     const source = new EventSource("/api/stream");
     source.addEventListener("ready", () => setStatus(true));
     source.addEventListener("telemetry", (event) => updateDrone(JSON.parse(event.data)));
+    source.addEventListener("activation", (event) => updateActivation(JSON.parse(event.data)));
     source.addEventListener("airspace_event", (event) => addEvent(JSON.parse(event.data)));
     source.addEventListener("zones", (event) => updateZones(JSON.parse(event.data)));
     source.onerror = () => setStatus(false);
