@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DAAS Dashboard</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-    <link rel="stylesheet" href="/static/style.css?v=6">
+    <link rel="stylesheet" href="/static/style.css?v=7">
 </head>
 <body>
     <div class="shell">
@@ -22,13 +22,63 @@
         </header>
         <main class="layout">
             <section id="map"></section>
-            <aside class="panel">
-                <h2>Airspace Events</h2>
-                <div id="event-log"></div>
+            <aside class="sidebar">
+                <section class="panel">
+                    <div class="panel-heading">
+                        <div>
+                            <h2>Airspace Events</h2>
+                            <p>Latest safety updates from the live airspace feed.</p>
+                        </div>
+                    </div>
+                    <div id="event-log" aria-live="polite"></div>
+                </section>
+
+                <section class="panel">
+                    <div class="panel-heading">
+                        <div>
+                            <h2>No-fly Zones</h2>
+                            <p>Click the map to set a center point, then publish the restricted area.</p>
+                        </div>
+                    </div>
+
+                    <form id="zone-form" class="zone-form">
+                        <label>
+                            Zone name
+                            <input id="zone-name" type="text" value="Temporary No-fly Zone" required>
+                        </label>
+                        <div class="field-row">
+                            <label>
+                                Radius (m)
+                                <input id="zone-radius" type="number" min="25" step="25" value="250" required>
+                            </label>
+                            <label>
+                                Max altitude (m)
+                                <input id="zone-max-alt" type="number" min="10" step="10" value="120" required>
+                            </label>
+                        </div>
+                        <div class="field-row">
+                            <label>
+                                Latitude
+                                <input id="zone-lat" type="number" step="0.000001" readonly required>
+                            </label>
+                            <label>
+                                Longitude
+                                <input id="zone-lon" type="number" step="0.000001" readonly required>
+                            </label>
+                        </div>
+                        <div class="actions">
+                            <button id="zone-pick" class="secondary" type="button">Pick on map</button>
+                            <button class="primary" type="submit">Publish zone</button>
+                        </div>
+                    </form>
+
+                    <div id="zone-status" class="zone-status">Pick a center point to prepare a no-fly zone.</div>
+                    <div id="zone-list" class="zone-list" aria-live="polite"></div>
+                </section>
             </aside>
         </main>
     </div>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="/static/map.js?v=6"></script>
+    <script src="/static/map.js?v=7"></script>
 </body>
 </html>
