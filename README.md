@@ -1,246 +1,91 @@
-﻿# DAAS Course Project
-
-Modular Drone Airspace Advisory System designed for the TTM4115 project workflow.
-
-This repository is intentionally split into independent components so different team members can work in parallel without blocking each other.
-
-## Project Structure
-
-### `apps/airspace_core`
-
-Main responsibility:
-- central airspace logic
-- drone registration
-- mission activation
-- conflict detection
-- priority rules
-- restricted zones / no-fly zones
-- advisory publication
-
-This is the component that decides what the system should do.
-
-### `apps/drone_simulator`
-
-Main responsibility:
-- drone state machines
-- mission execution
-- takeoff / cruise / evasion / landing
-- telemetry publication
-- advisory handling
-
-This is the component that simulates drone behavior in the airspace.
-
-### `apps/dashboard`
-
-Main responsibility:
-- operator-facing dashboards
-- live map rendering
-- airspace event visualization
-- restricted zone visualization
-- mission-planner UI for manual drone creation
-- browser delivery via Flask
-
-This is the component that shows what is happening and lets an operator request new drone missions from pickup/dropoff points.
-
-### `apps/control_gateway`
-
-Main responsibility:
-- manual or external control input
-- Raspberry Pi / SenseHAT integration
-- command forwarding to drones
-
-This is the component that injects operator or hardware control into the system.
-
-### `packages/shared`
-
-Main responsibility:
-- shared schemas
-- MQTT topics
-- enums
-- configuration
-- geometry helpers
-
-This package must stay stable because every other component depends on it.
-
-## Recommended Team Split
-
-The repository is now organized to support a team of 6 people working from the final Spec V2.
-
-### Member 1: Federico - Airspace Core Lifecycle
-
-Own these files/folders:
-- [apps/airspace_core/core.py](apps/airspace_core/core.py)
-- [apps/airspace_core/mission.py](apps/airspace_core/mission.py)
-
-Main focus:
-- registration
-- activation
-- mission assignment
-- airspace event publication for lifecycle changes
-
-### Member 2: Mats - Airspace Core Safety Logic
-
-Own these files/folders:
-- [apps/airspace_core/rules.py](apps/airspace_core/rules.py)
-- [tests/test_rules.py](tests/test_rules.py)
-
-Main focus:
-- conflict detection
-- advisory logic
-- restricted-zone behavior
-- priority-rule behavior
-
-Note:
-- `core.py` remains primarily owned by Federico; Mats only touches it when a reviewed integration change is needed.
-
-### Member 3: Auslaug - Drone Simulator
-
-Own these files/folders:
-- [apps/drone_simulator/fleet.py](apps/drone_simulator/fleet.py)
-- [apps/drone_simulator/main.py](apps/drone_simulator/main.py)
-
-Main focus:
-- autonomous drone state machines
-- telemetry cadence
-- mission progression
-- advisory execution
-
-### Member 4: Isak - Control Gateway / Raspberry Pi
-
-Own these files/folders:
-- [apps/control_gateway/main.py](apps/control_gateway/main.py)
-
-Recommended new files:
-- `apps/control_gateway/sensehat_client.py`
-- `apps/control_gateway/mock_controller.py`
-
-Main focus:
-- external control input
-- Raspberry Pi / SenseHAT integration
-- command forwarding to the manual drone
-
-### Member 5: Asne - Dashboard Backend
-
-Own these files/folders:
-- [apps/dashboard/main.py](apps/dashboard/main.py)
-
-Main focus:
-- snapshot endpoint
-- SSE stream
-- zone command API
-- mission request API
-- backend aggregation for the operator views
-
-### Member 6: Jordan - Dashboard Frontend and Demo Polish
-
-Own these files/folders:
-- [apps/dashboard/templates/index.html](apps/dashboard/templates/index.html)
-- [apps/dashboard/static/map.js](apps/dashboard/static/map.js)
-- [apps/dashboard/static/style.css](apps/dashboard/static/style.css)
-- [docs](docs)
-
-Main focus:
-- live UI quality
-- map readability
-- event panel clarity
-- zone visualization
-- planner usability
-- final demo/readability polish
-
-### Shared Ownership
-
-These areas are contracts and must only be changed after team agreement:
-- [packages/shared](packages/shared)
-- [tests](tests)
-- [scripts/start_local.ps1](scripts/start_local.ps1)
-
-## Component Boundaries
-
-To avoid team collisions:
-
-- `airspace_core` must not contain dashboard rendering logic
-- `dashboard` must not contain airspace decision logic
-- `drone_simulator` must not decide global rules
-- `control_gateway` must not bypass the shared topic/schema contract
-- all cross-component contracts must go through `packages/shared`
-
-## Parallel Development Workflow
-
-Use this workflow if teammates are developing directly from the Spec V2 and this repository.
-
-1. Read the Spec V2 use cases first.
-2. Read [docs/architecture.md](docs/architecture.md) and [docs/component-contracts.md](docs/component-contracts.md).
-3. Pick one owned component and work only inside that component unless the team has agreed a shared-contract change.
-4. Treat `packages/shared` as frozen by default.
-5. Test each component locally against the current MQTT topics before integrating UI or hardware changes.
-6. Merge only after the component still satisfies the related Spec V2 use case.
-
-Practical rule:
-
-- if you need to change a topic name, message schema, enum, or shared config value, stop and sync with the whole team first
-- if you only need to change local behavior inside your component, do it without touching shared contracts
-
-## Suggested Work Order
-
-If the team wants to avoid blocking:
-
-1. Freeze [packages/shared/shared/topics.py](packages/shared/shared/topics.py) and [packages/shared/shared/schemas.py](packages/shared/shared/schemas.py).
-2. Finish the end-to-end flow `register -> activate -> telemetry`.
-3. Finish the end-to-end flow `detect conflict -> publish advisory -> drone reacts`.
-4. Finish the end-to-end flow `define zone -> publish zone update -> dashboard shows zone`.
-5. Connect the manual drone path `SenseHAT/control gateway -> control topic -> manual drone session`.
-6. Finish the planner flow `mission request -> spawn drone -> activate route -> dashboard shows new mission`.
-
-## Current State Machines
-
-Implemented with STMPY:
-- `DroneRegistryMachine` in [apps/airspace_core/core.py](apps/airspace_core/core.py)
-- `ConflictMonitorMachine` in [apps/airspace_core/core.py](apps/airspace_core/core.py)
-- `DroneFlightMachine` in [apps/drone_simulator/fleet.py](apps/drone_simulator/fleet.py)
-- `ManualDroneMachine` in [apps/drone_simulator/fleet.py](apps/drone_simulator/fleet.py)
-
-Not state-machine-driven right now:
-- `dashboard`
-- `control_gateway`
-
-## Communication Model
-
-- MQTT between backend components
-- MQTT zone-command flow between dashboard/backend and airspace core
-- MQTT mission-request flow between planner dashboard, airspace core, and drone simulator
-- HTTP + SSE between dashboard backend and browser
-- HTTP + TCP integration for control input
-
-Canonical topics are defined in:
-- [packages/shared/shared/topics.py](packages/shared/shared/topics.py)
-
-Canonical message schemas are defined in:
-- [packages/shared/shared/schemas.py](packages/shared/shared/schemas.py)
-
-## Traceability To Spec V2
-
-- `Register Drone for Monitored Flight` -> `apps/airspace_core` + `apps/drone_simulator`
-- `Register Drone for Monitored Flight (manual planner flow)` -> `apps/dashboard` + `apps/airspace_core` + `apps/drone_simulator`
-- `Resolve Airspace Conflict` -> `apps/airspace_core` + `apps/drone_simulator`
-- `Define Restricted Airspace Constraints` -> `apps/dashboard` + `apps/airspace_core`
-- `Monitor Active Airspace` -> `apps/dashboard`
-
-## Deployment Diagram
-
-The repository implementation follows the same deployment structure described in the final Spec V2.
-
-- [Open the deployment diagram PDF](docs/diagrams/Deployment_Diagram_Team_18.pdf)
-
-## Minimal Local Run
-
-### 1. Create a virtual environment
+# Drone Airspace Advisory System (DAAS)
+
+This repository contains the implementation of the DAAS course project. The system demonstrates monitored low-altitude drone operations in shared urban airspace with live visualization, mission assignment, restricted-airspace handling, conflict advisories, and manual drone control integration.
+
+## System Overview
+
+The project is organized as a distributed system with four main runtime components:
+
+- `apps/airspace_core`
+  - central coordination logic
+  - drone registration and activation
+  - mission assignment
+  - restricted zone management
+  - conflict detection and advisory publication
+
+- `apps/drone_simulator`
+  - autonomous drone mission execution
+  - telemetry publication
+  - advisory handling
+  - one manual drone session for external control input
+
+- `apps/dashboard`
+  - live monitoring dashboard
+  - mission request form with pickup and dropoff selection on the map
+  - no-fly zone creation and removal
+  - event feed and mission overlays
+
+- `apps/control_gateway`
+  - HTTP and TCP control input bridge
+  - forwards manual control commands to the reserved manual drone
+
+Shared contracts used by all components are defined in `packages/shared`.
+
+## Implemented Functionality
+
+The current implementation supports these end-to-end flows:
+
+- drone registration through MQTT
+- monitored-flight activation with mission routes
+- continuous telemetry updates from simulated drones
+- live airspace monitoring in the browser
+- mission requests from the dashboard with pickup/dropoff selection
+- dynamic spawning of requested drones
+- creation and removal of restricted no-fly zones
+- conflict detection and advisory publication
+- advisory execution in the simulator
+- manual control of one dedicated drone through the control gateway
+
+## Repository Structure
+
+```text
+apps/
+  airspace_core/      Central coordination logic
+  control_gateway/    HTTP/TCP control bridge
+  dashboard/          Flask backend and browser UI
+  drone_simulator/    Simulated drone sessions
+packages/
+  shared/             Shared schemas, topics, config, enums, geometry helpers
+docker/
+  compose.yml         Mosquitto broker container
+docs/
+  architecture.md
+  dashboard-demo.md
+  diagrams/
+tests/
+```
+
+## Prerequisites
+
+- Python 3.12
+- `pip`
+- an MQTT broker on `localhost:1883`
+
+You can use either:
+
+- a local Mosquitto installation/service
+- or Docker Desktop with the broker from `docker/compose.yml`
+
+## Installation
+
+Create and activate a virtual environment:
 
 ```powershell
 python -m venv .venv
-.venv\Scripts\Activate.ps1
+.\.venv\Scripts\Activate.ps1
 ```
 
-### 2. Install dependencies
+Install the dependencies:
 
 ```powershell
 pip install -r apps\airspace_core\requirements.txt
@@ -251,71 +96,96 @@ pip install -r requirements-dev.txt
 pip install -e packages\shared
 ```
 
-### 3. Start the broker
+## Start the MQTT Broker
+
+If you use Docker:
 
 ```powershell
 docker compose -f docker\compose.yml up -d
 ```
 
-If you already have Mosquitto running locally, you can use that instead.
+If you already have a local Mosquitto service running on port `1883`, you can use that instead.
 
-### 4. Start the components
+## Run the Project
 
-```powershell
-python -m apps.airspace_core.main
-python -m apps.dashboard.main
-python -m apps.control_gateway.main
-python -m apps.drone_simulator.main --drones 6 --manual-drone-id drone-rpi-001
-```
-
-Or use:
+### Option 1: Windows helper script
 
 ```powershell
 .\scripts\start_local.ps1
 ```
 
+This starts:
+
+- `apps.airspace_core.main`
+- `apps.dashboard.main`
+- `apps.control_gateway.main`
+- `apps.drone_simulator.main --drones 6 --manual-drone-id drone-rpi-001`
+
+### Option 2: Start each component manually
+
+Open four terminals in the repository root and run:
+
+```powershell
+python -m apps.airspace_core.main
+```
+
+```powershell
+python -m apps.dashboard.main
+```
+
+```powershell
+python -m apps.control_gateway.main
+```
+
+```powershell
+python -m apps.drone_simulator.main --drones 6 --manual-drone-id drone-rpi-001
+```
+
 ## Main URLs
 
-- Monitoring Dashboard: [http://127.0.0.1:5001](http://127.0.0.1:5001)
-- Control Gateway API: [http://127.0.0.1:5002](http://127.0.0.1:5002)
+- Dashboard: [http://127.0.0.1:5001](http://127.0.0.1:5001)
+- Control gateway: [http://127.0.0.1:5002](http://127.0.0.1:5002)
 
-## Mission Request on the Main Dashboard
+## Using the Dashboard
 
-The main dashboard now includes mission creation directly in the operator view.
+The main dashboard provides:
 
-Planner flow:
+- live drone positions and trails
+- mission overlays
+- event log
+- mission request form
+- no-fly zone management
 
-- open [http://127.0.0.1:5001](http://127.0.0.1:5001)
-- choose a unique `drone_id`
-- use `Mission Request` and click `Pick on map`
-- click the map once for the pickup point
-- click the map again for the dropoff point
-- submit the mission request from the same page
+### Create a mission
 
-What happens next:
+1. Open the dashboard.
+2. Enter a unique `drone_id`.
+3. Click `Pick on map` in the `Mission Request` section.
+4. Click once for the pickup point.
+5. Click once for the dropoff point.
+6. Submit the form.
 
-- the planner publishes a mission request
-- the airspace core stores the requested route
-- the simulator spawns the requested drone dynamically
-- the airspace core activates that drone with the requested pickup/dropoff route
-- the monitoring dashboard starts showing the new drone and mission
+The airspace core stores the request, the simulator spawns the drone, and the mission appears in the dashboard.
 
-## Raspberry Pi / SenseHAT Controlled Drone
+### Create a no-fly zone
 
-By default, one drone is reserved for manual control:
+1. Open the dashboard.
+2. In the `No-fly Zones` section, click `Pick on map`.
+3. Select the center point.
+4. Set name, radius, and altitude range.
+5. Submit the form.
+
+The zone is published to the airspace core and then shown in the live view.
+
+## Manual Drone Control
+
+One drone is reserved for manual control by default:
+
 - `drone-rpi-001`
 
-This drone is created by the simulator as a manual STMPY machine.
-The remaining drones continue to fly autonomously.
+This drone can be controlled through the control gateway over HTTP or TCP.
 
-### How it works
-
-- `apps/drone_simulator` creates one manual drone machine
-- `apps/control_gateway` accepts control input over HTTP or TCP
-- the gateway republishes commands on the drone control MQTT topic
-- the manual drone updates heading, speed, and climb/descent from those commands
-
-### HTTP control example
+### HTTP example
 
 ```powershell
 Invoke-RestMethod `
@@ -325,31 +195,36 @@ Invoke-RestMethod `
   -Body '{"heading_delta":8,"throttle_delta":0.6,"speed_delta":0.8}'
 ```
 
-### TCP control example for Raspberry Pi
+### TCP example
 
-The TCP gateway listens on port `9090`.
-
-Each command must be sent as one JSON line:
+The TCP gateway listens on port `9090`. Send one JSON object per line:
 
 ```json
 {"drone_id":"drone-rpi-001","heading_delta":6,"throttle_delta":0.4,"speed_delta":0.5}
 ```
 
-This makes it easy to connect a Raspberry Pi process that reads SenseHAT values and forwards them directly.
+This is the integration point intended for Raspberry Pi / Sense HAT input.
 
-## Key Docs
+## Stop the Project
 
-- Architecture: [docs/architecture.md](docs/architecture.md)
-- Component contracts: [docs/component-contracts.md](docs/component-contracts.md)
-- Development plan: [docs/development-plan.md](docs/development-plan.md)
-- Team split: [docs/team-split.md](docs/team-split.md)
+If you started the components manually, stop them with `Ctrl+C` in each terminal.
 
-## Suggested Next Team Milestones
+If you used Docker for the broker, stop it with:
 
-1. Freeze shared schemas and topics.
-2. Freeze the deployment diagram and component ownership.
-3. Finish end-to-end registration -> activation -> telemetry flow.
-4. Finish conflict detection -> advisory -> recovery flow.
-5. Add manned aircraft and restricted zone scenarios.
-6. Add integration tests across components.
+```powershell
+docker compose -f docker\compose.yml down
+```
 
+## Tests
+
+Run the automated test suite with:
+
+```powershell
+python -m pytest
+```
+
+## Additional Documentation
+
+- [Architecture notes](docs/architecture.md)
+- [Dashboard demo notes](docs/dashboard-demo.md)
+- [Deployment diagram PDF](docs/diagrams/Deployment_Diagram_Team_18.pdf)
