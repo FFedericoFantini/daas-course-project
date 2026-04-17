@@ -102,7 +102,11 @@ class DroneRegistryMachine:
         activation = self.service._create_activation_for_drone(self.drone_id, self.mission_counter)
         self.mission_counter += 1
         self.service._record_activation(activation)
-        self.service.mqtt_client.publish(DRONE_ACTIVATION.format(drone_id=self.drone_id), activation.to_json())
+        self.service.mqtt_client.publish(
+            DRONE_ACTIVATION.format(drone_id=self.drone_id),
+            activation.to_json(),
+            retain=True,
+        )
         self.service.publish_event("drone_activated", self.drone_id, f"Mission {activation.mission_id} assigned")
 
     def on_delay(self):
@@ -255,6 +259,14 @@ class AirspaceCore:
             participant.activation_count += 1
         self.activations[activation.drone_id] = activation
 
+    def _clear_activation(self, drone_id: str):
+        self.activations.pop(drone_id, None)
+        self.mqtt_client.publish(
+            DRONE_ACTIVATION.format(drone_id=drone_id),
+            "",
+            retain=True,
+        )
+
     def _create_activation_for_drone(self, drone_id: str, mission_counter: int) -> ActivationMessage:
         request = self.pending_mission_requests.pop(drone_id, None)
         mission_id = f"{drone_id}-mission-{mission_counter:03d}"
@@ -333,6 +345,7 @@ class AirspaceCore:
 
         participant.lifecycle_state = "inactive"
         participant.active_mission_id = ""
+        self._clear_activation(telemetry.drone_id)
 
     def _update_lifecycle_from_telemetry(self, telemetry: TelemetryMessage):
         participant = self._participant(telemetry.drone_id)

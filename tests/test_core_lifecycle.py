@@ -6,8 +6,8 @@ class DummyMqttClient:
     def __init__(self):
         self.messages = []
 
-    def publish(self, topic, payload):
-        self.messages.append((topic, payload))
+    def publish(self, topic, payload, **kwargs):
+        self.messages.append((topic, payload, kwargs))
 
 
 def test_participant_lifecycle_tracks_registration_activation_and_telemetry():

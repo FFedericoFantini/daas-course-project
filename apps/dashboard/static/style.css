@@ -271,13 +271,13 @@ button {
     position: relative;
     display: grid;
     place-items: center;
-    width: 54px;
-    height: 54px;
+    width: 120px;
+    height: 120px;
 }
 
 .drone-altitude {
     position: absolute;
-    bottom: 34px;
+    bottom: 70px;
     padding: 2px 6px;
     border-radius: 999px;
     background: rgba(255, 255, 255, 0.92);

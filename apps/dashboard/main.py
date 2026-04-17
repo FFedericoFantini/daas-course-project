@@ -23,6 +23,7 @@ state_lock = threading.Lock()
 latest_drones = {}
 latest_manned = {}
 activations = {}
+activation_announced = set()
 events = []
 zones = []
 subscribers = []
@@ -51,28 +52,52 @@ def on_connect(client, userdata, flags, reason_code, properties=None):
 def on_message(client, userdata, msg):
     topic = msg.topic
     parts = topic.split("/")
-    payload = json.loads(msg.payload.decode("utf-8"))
+    raw_payload = msg.payload.decode("utf-8")
+    pending_activation = None
     with state_lock:
         if parts[1] == "drone" and parts[3] == "telemetry":
+            payload = json.loads(raw_payload)
             latest_drones[payload["drone_id"]] = payload
             event_type = "telemetry"
+            if payload["drone_id"] in activations and payload["drone_id"] not in activation_announced:
+                pending_activation = activations[payload["drone_id"]]
+                activation_announced.add(payload["drone_id"])
         elif parts[1] == "drone" and parts[3] == "activation":
-            activations[payload["drone_id"]] = payload
-            event_type = "activation"
+            drone_id = parts[2]
+            if not raw_payload:
+                activations.pop(drone_id, None)
+                activation_announced.discard(drone_id)
+                payload = {"drone_id": drone_id}
+                event_type = "activation_cleared"
+            else:
+                payload = json.loads(raw_payload)
+                activations[payload["drone_id"]] = payload
+                if payload["drone_id"] in latest_drones:
+                    activation_announced.add(payload["drone_id"])
+                    event_type = "activation"
+                else:
+                    activation_announced.discard(payload["drone_id"])
+                    event_type = None
         elif parts[1] == "manned":
+            payload = json.loads(raw_payload)
             latest_manned[payload["drone_id"]] = payload
             event_type = "manned"
         elif topic == AIRSPACE_EVENT:
+            payload = json.loads(raw_payload)
             events.insert(0, payload)
             del events[50:]
             event_type = "airspace_event"
         elif topic == ZONE_UPDATE:
+            payload = json.loads(raw_payload)
             zones.clear()
             zones.extend(payload)
             event_type = "zones"
         else:
             return
-    publish_stream(event_type, payload)
+    if event_type is not None:
+        publish_stream(event_type, payload)
+    if pending_activation is not None:
+        publish_stream("activation", pending_activation)
 
 
 def create_mqtt_bridge():
@@ -95,11 +120,12 @@ def index():
 @app.route("/api/snapshot")
 def snapshot():
     with state_lock:
+        live_activations = {drone_id: activation for drone_id, activation in activations.items() if drone_id in latest_drones}
         return jsonify(
             {
                 "drones": list(latest_drones.values()),
                 "manned": list(latest_manned.values()),
-                "activations": activations,
+                "activations": live_activations,
                 "events": events,
                 "zones": zones,
             }
