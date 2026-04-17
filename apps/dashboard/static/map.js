@@ -18,6 +18,7 @@ let draftZoneLayer = null;
 let isPickingZone = false;
 let eventCount = 0;
 const MAX_PROJECTION_S = 0.35;
+const MANUAL_DRONE_ID_PREFIX = "drone-rpi";
 
 const zoneForm = document.getElementById("zone-form");
 const zoneNameInput = document.getElementById("zone-name");
@@ -73,14 +74,21 @@ function formatTime(timestamp) {
     });
 }
 
-function droneIcon(state, altitude) {
+function isManualDrone(droneId) {
+    return droneId.startsWith(MANUAL_DRONE_ID_PREFIX);
+}
+
+function droneIcon(droneId, state, altitude) {
     const color = state === "evading" ? "#d86c1e" : state === "airborne" ? "#188b68" : "#50635a";
+    const manual = isManualDrone(droneId);
     return L.divIcon({
         className: "drone-marker",
         html: `
             <div class="drone-stack">
                 <div class="drone-altitude">${Math.round(altitude)}m</div>
-                <div class="drone-dot" style="background:${color}"></div>
+                <div class="drone-dot ${manual ? "drone-dot-manual" : ""}" style="background:${color}">
+                    ${manual ? '<span class="drone-badge">RPI</span>' : ""}
+                </div>
             </div>
         `,
         iconSize: [54, 54],
@@ -113,7 +121,7 @@ function updateDrone(tel) {
     droneTelemetry[tel.drone_id] = tel;
 
     if (!droneMarkers[tel.drone_id]) {
-        droneMarkers[tel.drone_id] = L.marker(latLng, { icon: droneIcon(tel.state, tel.position.alt) }).addTo(map);
+        droneMarkers[tel.drone_id] = L.marker(latLng, { icon: droneIcon(tel.drone_id, tel.state, tel.position.alt) }).addTo(map);
         droneTrails[tel.drone_id] = L.polyline([], {
             color: "#188b68",
             weight: 3,
@@ -123,9 +131,10 @@ function updateDrone(tel) {
         }).addTo(map);
     }
 
-    droneMarkers[tel.drone_id].setIcon(droneIcon(tel.state, tel.position.alt));
+    droneMarkers[tel.drone_id].setIcon(droneIcon(tel.drone_id, tel.state, tel.position.alt));
+    const modeLabel = isManualDrone(tel.drone_id) ? "manual control" : "autonomous mission";
     droneMarkers[tel.drone_id].bindTooltip(
-        `<strong>${escapeHtml(tel.drone_id)}</strong><br>State: ${escapeHtml(tel.state)}<br>Alt: ${tel.position.alt.toFixed(0)}m<br>Hdg: ${tel.heading.toFixed(0)}&deg;`
+        `<strong>${escapeHtml(tel.drone_id)}</strong><br>Mode: ${modeLabel}<br>State: ${escapeHtml(tel.state)}<br>Alt: ${tel.position.alt.toFixed(0)}m<br>Hdg: ${tel.heading.toFixed(0)}&deg;`
     );
     droneTrails[tel.drone_id].addLatLng(latLng);
     const points = droneTrails[tel.drone_id].getLatLngs();

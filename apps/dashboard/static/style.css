@@ -298,6 +298,25 @@ button {
     box-shadow: 0 0 0 6px rgba(24, 139, 104, 0.14), 0 5px 12px rgba(23, 50, 37, 0.18);
 }
 
+.drone-dot-manual {
+    width: 18px;
+    height: 18px;
+    border-radius: 6px;
+    transform: rotate(45deg);
+    box-shadow: 0 0 0 7px rgba(37, 99, 235, 0.14), 0 6px 14px rgba(23, 50, 37, 0.22);
+    display: grid;
+    place-items: center;
+}
+
+.drone-badge {
+    transform: rotate(-45deg);
+    color: #ffffff;
+    font-size: 7px;
+    font-weight: 800;
+    letter-spacing: 0.4px;
+    line-height: 1;
+}
+
 .mission-marker {
     background: transparent;
     border: 0;
