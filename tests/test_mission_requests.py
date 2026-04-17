@@ -1,14 +1,17 @@
+from types import SimpleNamespace
+
 from apps.airspace_core.core import AirspaceCore
-from shared.schemas import MissionRequestMessage, Position
-from shared.topics import DRONE_SPAWN_REQUEST
+from shared.models import DroneState
+from shared.schemas import MissionRequestMessage, Position, RegisterMessage
+from shared.topics import DRONE_ACTIVATION, DRONE_SPAWN_REQUEST
 
 
 class DummyMqttClient:
     def __init__(self):
         self.messages = []
 
-    def publish(self, topic, payload):
-        self.messages.append((topic, payload))
+    def publish(self, topic, payload, **kwargs):
+        self.messages.append((topic, payload, kwargs))
 
 
 def test_mission_request_round_trip():
@@ -81,3 +84,38 @@ def test_invalid_requested_route_falls_back_to_default_route():
     assert activation.reason == "Mission assigned by airspace core"
     assert service.events[0].event_type == "mission_route_fallback"
     assert activation.route[0].lat != request.pickup.lat or activation.route[-1].lon != request.dropoff.lon
+
+
+def test_completed_drone_id_can_be_reused_for_new_planner_mission():
+    service = AirspaceCore()
+    service.mqtt_client = DummyMqttClient()
+
+    register = RegisterMessage(
+        drone_id="planner-reuse",
+        drone_type="quadcopter",
+        operator="planner-user",
+        max_altitude=60.0,
+        max_speed=22.0,
+    )
+    service._record_registration(register)
+    service.participants["planner-reuse"].lifecycle_state = "inactive"
+    service.participants["planner-reuse"].last_reported_state = DroneState.IDLE.value
+    service.registry_machines["planner-reuse"] = SimpleNamespace(mission_counter=1)
+
+    request = MissionRequestMessage(
+        drone_id="planner-reuse",
+        operator="planner-user",
+        drone_type="quadcopter",
+        pickup=Position(lat=63.4305, lon=10.3951, alt=0.0),
+        dropoff=Position(lat=63.4370, lon=10.4100, alt=0.0),
+        cruise_altitude=60.0,
+        max_speed=22.0,
+    )
+
+    service._handle_mission_request(request)
+
+    assert "planner-reuse" not in service.pending_mission_requests
+    topics = [topic for topic, _, _ in service.mqtt_client.messages]
+    assert DRONE_ACTIVATION.format(drone_id="planner-reuse") in topics
+    assert service.activations["planner-reuse"].mission_id == "planner-reuse-mission-001"
+    assert service.events[0].event_type == "drone_activated"

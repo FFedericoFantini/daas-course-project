@@ -149,7 +149,7 @@ class DroneFlightMachine:
 
     def start_mission(self):
         self.state = DroneState.ACTIVATED
-        self.speed = DEFAULT_CRUISE_SPEED_MS * 0.4
+        self.speed = 0.0
         self.vertical_speed = DEFAULT_VERTICAL_SPEED_MS
         self.altitude_target = self.nominal_altitude
         self.landing_site = self.route[-1] if self.route else None
@@ -313,6 +313,8 @@ class DroneFlightMachine:
 
     def complete_mission(self):
         self.state = DroneState.COMPLETED
+        if self.landing_site is not None:
+            self.position = Position(self.landing_site.lat, self.landing_site.lon, 0.0)
         self.speed = 0.0
         self.vertical_speed = 0.0
         self.altitude_target = 0.0
@@ -878,6 +880,9 @@ class SimulatorService:
         parts = msg.topic.split("/")
         drone_id = parts[2]
         if parts[3] == "activation":
+            if not msg.payload:
+                logger.info("[%s] Ignoring cleared activation payload", drone_id)
+                return
             self.drones[drone_id].accept_activation(ActivationMessage.from_json(msg.payload))
         elif parts[3] == "advisory":
             self.drones[drone_id].accept_advisory(AdvisoryMessage.from_json(msg.payload))

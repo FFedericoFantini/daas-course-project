@@ -29,5 +29,20 @@ def test_takeoff_transitions_to_cruise_within_altitude_tolerance():
 
     assert machine.state == DroneState.TAKEOFF
     assert machine.position.alt == 60.0
+    assert machine.position.lat == 63.4305
+    assert machine.position.lon == 10.3951
     assert machine.vertical_speed == 0.0
     assert sent_events == ["cruise"]
+
+
+def test_complete_mission_snaps_to_exact_dropoff_point():
+    machine = DroneFlightMachine("drone-001", DummyMqttClient(), {})
+    machine.landing_site = Position(lat=63.4310, lon=10.3960, alt=60.0)
+    machine.position = Position(lat=63.4309, lon=10.3958, alt=2.0)
+
+    machine.complete_mission()
+
+    assert machine.position.lat == 63.4310
+    assert machine.position.lon == 10.3960
+    assert machine.position.alt == 0.0
+    assert machine.state == DroneState.IDLE

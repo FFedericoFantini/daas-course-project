@@ -201,6 +201,26 @@ function updateDrone(tel) {
     document.getElementById("drone-count").textContent = `Drones: ${Object.keys(droneMarkers).length}`;
 }
 
+function clearDrone(droneId) {
+    clearDroneTooltipHideTimer(droneId);
+    const tooltip = droneTooltips[droneId];
+    if (tooltip && map.hasLayer(tooltip)) {
+        map.removeLayer(tooltip);
+    }
+    delete droneTooltips[droneId];
+    delete droneTelemetry[droneId];
+
+    if (droneMarkers[droneId]) {
+        droneMarkers[droneId].remove();
+        delete droneMarkers[droneId];
+    }
+    if (droneTrails[droneId]) {
+        droneTrails[droneId].remove();
+        delete droneTrails[droneId];
+    }
+    document.getElementById("drone-count").textContent = `Drones: ${Object.keys(droneMarkers).length}`;
+}
+
 function updateActivation(activation) {
     if (!activation.route || activation.route.length === 0) {
         return;
@@ -498,6 +518,7 @@ async function bootstrap() {
     source.addEventListener("ready", () => setStatus(true));
     source.addEventListener("telemetry", (event) => updateDrone(JSON.parse(event.data)));
     source.addEventListener("activation", (event) => updateActivation(JSON.parse(event.data)));
+    source.addEventListener("drone_cleared", (event) => clearDrone(JSON.parse(event.data).drone_id));
     source.addEventListener("activation_cleared", (event) => clearActivation(JSON.parse(event.data).drone_id));
     source.addEventListener("airspace_event", (event) => addEvent(JSON.parse(event.data)));
     source.addEventListener("zones", (event) => updateZones(JSON.parse(event.data)));

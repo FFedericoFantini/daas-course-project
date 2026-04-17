@@ -18,12 +18,15 @@ from shared.topics import (
 )
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
+MISSION_CLEANUP_DELAY_S = 30.0
+TERMINAL_DRONE_STATES = {"completed", "aborted"}
 
 state_lock = threading.Lock()
 latest_drones = {}
 latest_manned = {}
 activations = {}
 activation_announced = set()
+drone_cleanup_timers = {}
 events = []
 zones = []
 subscribers = []
@@ -49,16 +52,46 @@ def on_connect(client, userdata, flags, reason_code, properties=None):
     client.subscribe(ZONE_UPDATE)
 
 
+def cancel_drone_cleanup(drone_id: str):
+    timer = drone_cleanup_timers.pop(drone_id, None)
+    if timer is not None:
+        timer.cancel()
+
+
+def expire_drone(drone_id: str):
+    activation_removed = False
+    with state_lock:
+        latest_drones.pop(drone_id, None)
+        if drone_id in activations:
+            activations.pop(drone_id, None)
+            activation_announced.discard(drone_id)
+            activation_removed = True
+        drone_cleanup_timers.pop(drone_id, None)
+    publish_stream("drone_cleared", {"drone_id": drone_id})
+    if activation_removed:
+        publish_stream("activation_cleared", {"drone_id": drone_id})
+
+
+def schedule_drone_cleanup(drone_id: str):
+    cancel_drone_cleanup(drone_id)
+    timer = threading.Timer(MISSION_CLEANUP_DELAY_S, expire_drone, args=[drone_id])
+    timer.daemon = True
+    drone_cleanup_timers[drone_id] = timer
+    timer.start()
+
+
 def on_message(client, userdata, msg):
     topic = msg.topic
     parts = topic.split("/")
     raw_payload = msg.payload.decode("utf-8")
     pending_activation = None
+    cleanup_action = None
     with state_lock:
         if parts[1] == "drone" and parts[3] == "telemetry":
             payload = json.loads(raw_payload)
             latest_drones[payload["drone_id"]] = payload
             event_type = "telemetry"
+            cleanup_action = "schedule" if payload["state"] in TERMINAL_DRONE_STATES else "cancel"
             if payload["drone_id"] in activations and payload["drone_id"] not in activation_announced:
                 pending_activation = activations[payload["drone_id"]]
                 activation_announced.add(payload["drone_id"])
@@ -70,6 +103,7 @@ def on_message(client, userdata, msg):
                 payload = {"drone_id": drone_id}
                 event_type = "activation_cleared"
             else:
+                cancel_drone_cleanup(drone_id)
                 payload = json.loads(raw_payload)
                 activations[payload["drone_id"]] = payload
                 if payload["drone_id"] in latest_drones:
@@ -98,6 +132,10 @@ def on_message(client, userdata, msg):
         publish_stream(event_type, payload)
     if pending_activation is not None:
         publish_stream("activation", pending_activation)
+    if cleanup_action == "schedule":
+        schedule_drone_cleanup(payload["drone_id"])
+    elif cleanup_action == "cancel":
+        cancel_drone_cleanup(payload["drone_id"])
 
 
 def create_mqtt_bridge():
