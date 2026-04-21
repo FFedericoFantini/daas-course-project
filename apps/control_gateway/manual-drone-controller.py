@@ -44,6 +44,22 @@ def get_sense_class():
 
 SenseHat = get_sense_class()
 
+w = (150, 150, 150)
+e = (0, 0, 0)
+
+# Create images for three different coloured arrows
+
+arrow = [
+e,e,e,w,w,e,e,e,
+e,e,w,w,w,w,e,e,
+e,w,w,w,w,w,w,e,
+w,w,w,w,w,w,w,w,
+e,e,e,w,w,e,e,e,
+e,e,e,w,w,e,e,e,
+e,e,e,w,w,e,e,e,
+e,e,e,w,w,e,e,e
+]
+
 sense = SenseHat()
 
 # Control endpoint settings (override via env vars)
@@ -72,12 +88,20 @@ def send_control(drone_id, payload):
 
 def payload_for_direction(direction):
     if direction == 'up':
+        sense.set_rotation(0)
+        sense.set_pixels(arrow)
         return {"heading_delta": 0, "throttle_delta": 10, "speed_delta": 100}
     elif direction == 'down':
-        return {"heading_delta": 0, "throttle_delta": -10, "speed_delta": 0}
+        sense.set_rotation(180)
+        sense.set_pixels(arrow)
+        return {"heading_delta": 0, "throttle_delta": -10, "speed_delta": -100}
     elif direction == 'left':
+        sense.set_rotation(270)
+        sense.set_pixels(arrow)
         return {"heading_delta": -40, "throttle_delta": 0, "speed_delta": 100}
     elif direction == 'right':
+        sense.set_rotation(90)
+        sense.set_pixels(arrow)
         return {"heading_delta": 40, "throttle_delta": 0, "speed_delta": 100}
     return None
 
@@ -93,7 +117,7 @@ try:
             if event.action == 'pressed':
                 payload = payload_for_direction(event.direction)
                 if not payload:
-                    print(f"Joystick pressed (unknown): {event.direction}")
+                    sense.clear()
                     continue
 
                 print(f"Joystick pressed: {event.direction} -> sending: {payload}")
