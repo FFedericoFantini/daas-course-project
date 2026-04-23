@@ -1,6 +1,8 @@
 # Component Contracts
 
-This document freezes the practical contracts between components so the team can work in parallel without changing each other's internals.
+This document defines the current contracts between the DAAS runtime components.
+It is intended to make clear which component owns each responsibility and which
+interfaces must remain stable.
 
 ## Ownership Boundaries
 
@@ -8,154 +10,159 @@ This document freezes the practical contracts between components so the team can
 
 Owns:
 
-- drone registration lifecycle
-- mission activation
-- restricted-airspace constraints
-- conflict detection
-- advisory publication
-- airspace events
+- Drone registration lifecycle.
+- Mission activation and mission-request validation.
+- Retained activation cleanup.
+- Restricted-airspace constraints.
+- Conflict detection and advisory generation.
+- Airspace event publication.
 
 Must not own:
 
-- browser rendering
-- map visuals
-- SenseHAT input parsing
-- local drone motion logic
+- Browser rendering.
+- Dashboard UI state management.
+- Sense HAT input parsing.
+- Local drone movement simulation.
 
 ### `apps/drone_simulator`
 
 Owns:
 
-- autonomous drone mission sessions
-- manual drone session
-- telemetry cadence
-- mission progression
-- advisory execution
+- Autonomous drone sessions.
+- Manual drone session.
+- Drone takeoff, cruise, evasion, landing, completion, and abort behavior.
+- Telemetry cadence.
+- Advisory execution.
+- Dashboard-requested drone spawning.
 
 Must not own:
 
-- global airspace rules
-- zone validation policies
-- dashboard state aggregation
+- Global airspace policy.
+- Zone command validation policy.
+- Dashboard aggregation.
+- Manual input device handling.
 
 ### `apps/dashboard`
 
 Owns:
 
-- HTTP shell for the operator UI
-- SSE live updates to the browser
-- map/event visualization
-- zone-definition request submission
+- Operator dashboard HTTP shell.
+- `/api/snapshot` bootstrap data.
+- `/api/stream` live browser feed.
+- Browser map rendering.
+- Mission-request form and API.
+- Zone create/remove form and API.
+- Dashboard-only cleanup of completed mission overlays.
 
 Must not own:
 
-- direct airspace decisions
-- conflict logic
-- mission activation logic
+- Conflict detection.
+- Mission activation decisions.
+- Advisory policy.
+- Drone movement simulation.
 
 ### `apps/control_gateway`
 
 Owns:
 
-- Raspberry Pi or mock external control input
-- TCP/HTTP control ingestion
-- translation to MQTT control messages
+- HTTP manual control endpoint.
+- Optional TCP manual control bridge.
+- Translation from external input payloads to shared `ControlMessage` payloads.
+- Publishing manual control commands to MQTT.
+- Raspberry Pi Sense HAT controller script.
 
 Must not own:
 
-- drone registration
-- advisory generation
-- dashboard state
+- Drone registration.
+- Airspace advisories.
+- Zone logic.
+- Dashboard visualization.
 
 ### `packages/shared`
 
 Owns:
 
-- topic names
-- message schemas
-- enums
-- configuration
-- geometry helpers
+- MQTT topic names.
+- Message schemas.
+- Shared enums.
+- Runtime configuration defaults.
+- Geographic helper functions.
 
-This package is the shared contract. Changes here must be agreed by the whole team.
+Changes to this package affect multiple components and should be treated as
+contract changes.
 
-## Stable Interfaces
+## MQTT Topic Contract
 
-### MQTT Topics
+The canonical topic list is implemented in `packages/shared/shared/topics.py`.
 
-- `daas/drone/{drone_id}/register`
-- `daas/drone/{drone_id}/activation`
-- `daas/drone/{drone_id}/telemetry`
-- `daas/drone/{drone_id}/advisory`
-- `daas/drone/{drone_id}/control`
-- `daas/manned/{aircraft_id}/position`
-- `daas/airspace/event`
-- `daas/airspace/zones`
-- `daas/airspace/zones/command`
+| Topic | Producer | Consumer | Purpose |
+| --- | --- | --- | --- |
+| `daas/drone/{drone_id}/register` | Simulator | Airspace Core | Drone registration |
+| `daas/drone/{drone_id}/activation` | Airspace Core | Simulator, Dashboard | Mission activation |
+| `daas/drone/{drone_id}/telemetry` | Simulator | Airspace Core, Dashboard | Live telemetry |
+| `daas/drone/{drone_id}/advisory` | Airspace Core | Simulator | Conflict or zone advisory |
+| `daas/drone/{drone_id}/control` | Control Gateway | Simulator | Manual control command |
+| `daas/drone/spawn/request` | Airspace Core | Simulator | Spawn a dashboard-requested drone |
+| `daas/manned/{aircraft_id}/position` | External/mocked publisher | Airspace Core, Dashboard | Manned aircraft position |
+| `daas/airspace/event` | Airspace Core | Dashboard | Event feed |
+| `daas/airspace/zones` | Airspace Core | Dashboard, Simulator | Active zone list |
+| `daas/airspace/zones/command` | Dashboard | Airspace Core | Create/update/remove zone |
+| `daas/airspace/missions/request` | Dashboard | Airspace Core | Request a new mission |
 
-### Dashboard HTTP Endpoints
+## Dashboard HTTP Contract
 
-- `GET /` -> operator dashboard shell
-- `GET /api/snapshot` -> current aggregated state for bootstrap
-- `GET /api/stream` -> SSE live feed
-- `POST /api/zones` -> request zone create/update
-- `DELETE /api/zones/<zone_id>` -> request zone removal
+| Endpoint | Method | Purpose |
+| --- | --- | --- |
+| `/` | `GET` | Serve the dashboard page |
+| `/api/snapshot` | `GET` | Return current drones, manned aircraft, activations, events, and zones |
+| `/api/stream` | `GET` | Server-Sent Events stream for live browser updates |
+| `/api/zones` | `POST` | Publish a zone create/update command |
+| `/api/zones/<zone_id>` | `DELETE` | Publish a zone removal command |
+| `/api/mission-requests` | `POST` | Publish a mission request with pickup/dropoff points |
 
-### Control Gateway HTTP/TCP Endpoints
+The dashboard backend publishes requests to MQTT. It does not decide whether a
+mission or zone is operationally safe.
 
-- `GET /` -> capability/status probe
-- `POST /control/<drone_id>` -> send manual control
-- TCP `9090` -> newline-delimited JSON control input
+## Control Gateway Contract
 
-## Recommended Parallel Work Plan
+| Endpoint | Method/protocol | Purpose |
+| --- | --- | --- |
+| `/` | `GET` | Return gateway status and configured ports |
+| `/control/<drone_id>` | `POST` | Send manual control for one drone |
+| `9090` | TCP | Optional newline-delimited JSON control input |
 
-### Workstream 1: Airspace Core
+HTTP control payload:
 
-Deliverables:
+```json
+{
+  "heading_delta": 8,
+  "throttle_delta": 0.6,
+  "speed_delta": 0.8
+}
+```
 
-- registration/activation lifecycle
-- zone command handling
-- conflict/advisory logic
-- event publication
+TCP control payload:
 
-Integration dependency:
+```json
+{"drone_id":"drone-rpi-001","heading_delta":6,"throttle_delta":0.4,"speed_delta":0.5}
+```
 
-- depends only on stable schemas/topics from `packages/shared`
+The default manual drone ID is `drone-rpi-001`.
 
-### Workstream 2: Drone Simulator
+## Runtime Configuration Contract
 
-Deliverables:
+Important environment variables are defined in `packages/shared/shared/config.py`.
 
-- drone session behavior
-- manual drone behavior
-- telemetry publication
-- advisory response
+| Variable | Default | Used by |
+| --- | --- | --- |
+| `MQTT_BROKER_HOST` | `localhost` | Core, dashboard, simulator, gateway |
+| `MQTT_BROKER_PORT` | `1883` | Core, dashboard, simulator, gateway |
+| `DEFAULT_MANUAL_DRONE_ID` | `drone-rpi-001` | Simulator, gateway |
+| `CONTROL_GATEWAY_HTTP_PORT` | `5002` | Gateway |
+| `CONTROL_GATEWAY_TCP_PORT` | `9090` | Gateway |
+| `DEFAULT_CRUISE_ALTITUDE_M` | `60` | Core, simulator, dashboard |
+| `DEFAULT_CRUISE_SPEED_MS` | `25` | Simulator, dashboard |
+| `TELEMETRY_INTERVAL_MS` | `200` | Simulator |
 
-Integration dependency:
-
-- depends only on activation/advisory/control topic contracts
-
-### Workstream 3: Dashboard
-
-Deliverables:
-
-- live map
-- event log
-- zone visualization
-- zone definition UI or API client
-
-Integration dependency:
-
-- depends only on snapshot/SSE payloads and zone command API
-
-### Workstream 4: Control Gateway
-
-Deliverables:
-
-- SenseHAT bridge
-- HTTP/TCP control ingestion
-- command publishing
-
-Integration dependency:
-
-- depends only on the control topic contract
+For the distributed deployment, components running outside Raspberry Pi 4B #1
+must set `MQTT_BROKER_HOST=<PI1_IP>`.
