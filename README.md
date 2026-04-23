@@ -1,5 +1,4 @@
-
-Repository: https://github.com/FFedericoFantini/daas-course-project
+# Drone Airspace Advisory System (DAAS)
 
 This repository contains the implementation of the Drone Airspace Advisory System
 (DAAS) course project. The system demonstrates monitored low-altitude drone
