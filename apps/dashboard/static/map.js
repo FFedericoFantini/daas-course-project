@@ -13,11 +13,16 @@ const droneTrails = {};
 const droneTelemetry = {};
 const missionMarkers = {};
 const zoneLayers = {};
+const droneTooltips = {};
+const droneTooltipHideTimers = {};
 let currentZones = [];
 let draftZoneLayer = null;
 let isPickingZone = false;
 let eventCount = 0;
 const MAX_PROJECTION_S = 0.35;
+const MANUAL_DRONE_ID_PREFIX = "drone-rpi";
+const DRONE_HITBOX_SIZE_PX = 120;
+const DRONE_TOOLTIP_HIDE_DELAY_MS = 750;
 
 const zoneForm = document.getElementById("zone-form");
 const zoneNameInput = document.getElementById("zone-name");
@@ -73,18 +78,75 @@ function formatTime(timestamp) {
     });
 }
 
-function droneIcon(state, altitude) {
+function isManualDrone(droneId) {
+    return droneId.startsWith(MANUAL_DRONE_ID_PREFIX);
+}
+
+function droneTooltipHtml(tel) {
+    const modeLabel = isManualDrone(tel.drone_id) ? "manual control" : "autonomous mission";
+    return `<strong>${escapeHtml(tel.drone_id)}</strong><br>Mode: ${modeLabel}<br>State: ${escapeHtml(tel.state)}<br>Alt: ${tel.position.alt.toFixed(0)}m<br>Hdg: ${tel.heading.toFixed(0)}&deg;`;
+}
+
+function clearDroneTooltipHideTimer(droneId) {
+    if (!droneTooltipHideTimers[droneId]) {
+        return;
+    }
+    clearTimeout(droneTooltipHideTimers[droneId]);
+    delete droneTooltipHideTimers[droneId];
+}
+
+function ensureDroneTooltip(droneId) {
+    if (!droneTooltips[droneId]) {
+        droneTooltips[droneId] = L.tooltip({
+            direction: "top",
+            offset: [0, -26],
+            opacity: 0.96,
+        });
+    }
+    return droneTooltips[droneId];
+}
+
+function openDroneTooltip(droneId) {
+    const marker = droneMarkers[droneId];
+    const tel = droneTelemetry[droneId];
+    if (!marker || !tel) {
+        return;
+    }
+    clearDroneTooltipHideTimer(droneId);
+    const tooltip = ensureDroneTooltip(droneId);
+    tooltip.setContent(droneTooltipHtml(tel));
+    tooltip.setLatLng(marker.getLatLng());
+    if (!map.hasLayer(tooltip)) {
+        tooltip.addTo(map);
+    }
+}
+
+function scheduleDroneTooltipHide(droneId) {
+    clearDroneTooltipHideTimer(droneId);
+    droneTooltipHideTimers[droneId] = setTimeout(() => {
+        const tooltip = droneTooltips[droneId];
+        if (tooltip && map.hasLayer(tooltip)) {
+            map.removeLayer(tooltip);
+        }
+        delete droneTooltipHideTimers[droneId];
+    }, DRONE_TOOLTIP_HIDE_DELAY_MS);
+}
+
+function droneIcon(droneId, state, altitude) {
     const color = state === "evading" ? "#d86c1e" : state === "airborne" ? "#188b68" : "#50635a";
+    const manual = isManualDrone(droneId);
     return L.divIcon({
         className: "drone-marker",
         html: `
             <div class="drone-stack">
                 <div class="drone-altitude">${Math.round(altitude)}m</div>
-                <div class="drone-dot" style="background:${color}"></div>
+                <div class="drone-dot ${manual ? "drone-dot-manual" : ""}" style="background:${color}">
+                    ${manual ? '<span class="drone-badge">RPI</span>' : ""}
+                </div>
             </div>
         `,
-        iconSize: [54, 54],
-        iconAnchor: [27, 27],
+        iconSize: [DRONE_HITBOX_SIZE_PX, DRONE_HITBOX_SIZE_PX],
+        iconAnchor: [DRONE_HITBOX_SIZE_PX / 2, DRONE_HITBOX_SIZE_PX / 2],
     });
 }
 
@@ -113,7 +175,9 @@ function updateDrone(tel) {
     droneTelemetry[tel.drone_id] = tel;
 
     if (!droneMarkers[tel.drone_id]) {
-        droneMarkers[tel.drone_id] = L.marker(latLng, { icon: droneIcon(tel.state, tel.position.alt) }).addTo(map);
+        droneMarkers[tel.drone_id] = L.marker(latLng, { icon: droneIcon(tel.drone_id, tel.state, tel.position.alt) }).addTo(map);
+        droneMarkers[tel.drone_id].on("mouseover", () => openDroneTooltip(tel.drone_id));
+        droneMarkers[tel.drone_id].on("mouseout", () => scheduleDroneTooltipHide(tel.drone_id));
         droneTrails[tel.drone_id] = L.polyline([], {
             color: "#188b68",
             weight: 3,
@@ -123,14 +187,36 @@ function updateDrone(tel) {
         }).addTo(map);
     }
 
-    droneMarkers[tel.drone_id].setIcon(droneIcon(tel.state, tel.position.alt));
-    droneMarkers[tel.drone_id].bindTooltip(
-        `<strong>${escapeHtml(tel.drone_id)}</strong><br>State: ${escapeHtml(tel.state)}<br>Alt: ${tel.position.alt.toFixed(0)}m<br>Hdg: ${tel.heading.toFixed(0)}&deg;`
-    );
+    droneMarkers[tel.drone_id].setIcon(droneIcon(tel.drone_id, tel.state, tel.position.alt));
+    const tooltip = droneTooltips[tel.drone_id];
+    if (tooltip && map.hasLayer(tooltip)) {
+        tooltip.setContent(droneTooltipHtml(tel));
+        tooltip.setLatLng(droneMarkers[tel.drone_id].getLatLng());
+    }
     droneTrails[tel.drone_id].addLatLng(latLng);
     const points = droneTrails[tel.drone_id].getLatLngs();
     if (points.length > 120) {
         droneTrails[tel.drone_id].setLatLngs(points.slice(-120));
+    }
+    document.getElementById("drone-count").textContent = `Drones: ${Object.keys(droneMarkers).length}`;
+}
+
+function clearDrone(droneId) {
+    clearDroneTooltipHideTimer(droneId);
+    const tooltip = droneTooltips[droneId];
+    if (tooltip && map.hasLayer(tooltip)) {
+        map.removeLayer(tooltip);
+    }
+    delete droneTooltips[droneId];
+    delete droneTelemetry[droneId];
+
+    if (droneMarkers[droneId]) {
+        droneMarkers[droneId].remove();
+        delete droneMarkers[droneId];
+    }
+    if (droneTrails[droneId]) {
+        droneTrails[droneId].remove();
+        delete droneTrails[droneId];
     }
     document.getElementById("drone-count").textContent = `Drones: ${Object.keys(droneMarkers).length}`;
 }
@@ -181,6 +267,16 @@ function updateActivation(activation) {
     ).addTo(map);
 
     missionMarkers[droneId] = { pickup, dropoff, path };
+}
+
+function clearActivation(droneId) {
+    if (!missionMarkers[droneId]) {
+        return;
+    }
+    missionMarkers[droneId].pickup.remove();
+    missionMarkers[droneId].dropoff.remove();
+    missionMarkers[droneId].path.remove();
+    delete missionMarkers[droneId];
 }
 
 function updateZones(zones) {
@@ -401,6 +497,10 @@ function animateDrones() {
             return;
         }
         marker.setLatLng(projectTelemetryPosition(tel));
+        const tooltip = droneTooltips[droneId];
+        if (tooltip && map.hasLayer(tooltip)) {
+            tooltip.setLatLng(marker.getLatLng());
+        }
     });
 
     requestAnimationFrame(animateDrones);
@@ -418,6 +518,8 @@ async function bootstrap() {
     source.addEventListener("ready", () => setStatus(true));
     source.addEventListener("telemetry", (event) => updateDrone(JSON.parse(event.data)));
     source.addEventListener("activation", (event) => updateActivation(JSON.parse(event.data)));
+    source.addEventListener("drone_cleared", (event) => clearDrone(JSON.parse(event.data).drone_id));
+    source.addEventListener("activation_cleared", (event) => clearActivation(JSON.parse(event.data).drone_id));
     source.addEventListener("airspace_event", (event) => addEvent(JSON.parse(event.data)));
     source.addEventListener("zones", (event) => updateZones(JSON.parse(event.data)));
     source.onerror = () => setStatus(false);

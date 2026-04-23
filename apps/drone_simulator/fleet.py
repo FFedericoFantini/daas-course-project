@@ -125,6 +125,7 @@ class DroneFlightMachine:
         transitions = [
             {"source": "initial", "target": "registered"},
             {"trigger": "registration_done", "source": "registered", "target": "idle"},
+            {"trigger": "activate", "source": "registered", "target": "takeoff", "effect": "start_mission"},
             {"trigger": "activate", "source": "idle", "target": "takeoff", "effect": "start_mission"},
             {"trigger": "cruise", "source": "takeoff", "target": "airborne", "effect": "enter_airborne"},
             {"trigger": "advisory", "source": "takeoff", "target": "evading", "effect": "enter_evading"},
@@ -148,7 +149,7 @@ class DroneFlightMachine:
 
     def start_mission(self):
         self.state = DroneState.ACTIVATED
-        self.speed = DEFAULT_CRUISE_SPEED_MS * 0.4
+        self.speed = 0.0
         self.vertical_speed = DEFAULT_VERTICAL_SPEED_MS
         self.altitude_target = self.nominal_altitude
         self.landing_site = self.route[-1] if self.route else None
@@ -164,8 +165,9 @@ class DroneFlightMachine:
         self.altitude_target = self.nominal_altitude
         self._track_altitude_target(DEFAULT_VERTICAL_SPEED_MS)
         self._advance()
-        if self.position.alt >= self.nominal_altitude:
+        if abs(self.position.alt - self.nominal_altitude) <= 1.0 or self.position.alt >= self.nominal_altitude:
             self.position.alt = self.nominal_altitude
+            self.vertical_speed = 0.0
             self.stm.send("cruise")
             return
         self._schedule_tick()
@@ -311,6 +313,8 @@ class DroneFlightMachine:
 
     def complete_mission(self):
         self.state = DroneState.COMPLETED
+        if self.landing_site is not None:
+            self.position = Position(self.landing_site.lat, self.landing_site.lon, 0.0)
         self.speed = 0.0
         self.vertical_speed = 0.0
         self.altitude_target = 0.0
@@ -318,6 +322,17 @@ class DroneFlightMachine:
         self.state = DroneState.IDLE
 
     def accept_activation(self, activation: ActivationMessage):
+        if self.state not in {DroneState.IDLE, DroneState.REGISTERED}:
+            if self.mission_id == activation.mission_id:
+                return
+            logger.warning(
+                "[%s] Ignoring activation for mission %s while in state %s (current mission %s)",
+                self.drone_id,
+                activation.mission_id,
+                self.state.value,
+                self.mission_id or "none",
+            )
+            return
         self.route = list(activation.route)
         self.nominal_route = list(activation.route)
         self.zone_detour_active = False
@@ -596,6 +611,7 @@ class ManualDroneMachine:
         transitions = [
             {"source": "initial", "target": "registered"},
             {"trigger": "registration_done", "source": "registered", "target": "idle"},
+            {"trigger": "activate", "source": "registered", "target": "manual", "effect": "start_manual_mission"},
             {"trigger": "activate", "source": "idle", "target": "manual", "effect": "start_manual_mission"},
             {"trigger": "advisory", "source": "manual", "target": "evading"},
             {"trigger": "clear", "source": "evading", "target": "manual", "effect": "resume_manual"},
@@ -636,7 +652,18 @@ class ManualDroneMachine:
         self._schedule_tick()
 
     def accept_activation(self, activation: ActivationMessage):
-        self.route = activation.route
+        if self.state not in {DroneState.IDLE, DroneState.REGISTERED}:
+            if self.mission_id == activation.mission_id:
+                return
+            logger.warning(
+                "[%s] Ignoring activation for mission %s while in state %s (current mission %s)",
+                self.drone_id,
+                activation.mission_id,
+                self.state.value,
+                self.mission_id or "none",
+            )
+            return
+        self.route = list(activation.route)
         self.mission_id = activation.mission_id
         self.stm.send("activate")
 
@@ -853,6 +880,9 @@ class SimulatorService:
         parts = msg.topic.split("/")
         drone_id = parts[2]
         if parts[3] == "activation":
+            if not msg.payload:
+                logger.info("[%s] Ignoring cleared activation payload", drone_id)
+                return
             self.drones[drone_id].accept_activation(ActivationMessage.from_json(msg.payload))
         elif parts[3] == "advisory":
             self.drones[drone_id].accept_advisory(AdvisoryMessage.from_json(msg.payload))
