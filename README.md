@@ -1,4 +1,5 @@
 # Drone Airspace Advisory System (DAAS)
+![Dashboard_Image](docs/img/IMG_Dashboard.png)
 
 This repository contains the implementation of the Drone Airspace Advisory System
 (DAAS) course project. The system demonstrates monitored low-altitude drone
@@ -14,6 +15,8 @@ The intended demonstration deployment uses three devices:
 | Raspberry Pi 4B #1 | MQTT broker, Airspace Core, dashboard backend, control gateway | Central ATC/coordination node |
 | PC | Drone simulator and browser client | Runs the simulated drone fleet and opens the dashboard |
 | Raspberry Pi 4B #2 with Sense HAT | Manual control input | Sends joystick commands for the manual drone |
+
+![Deplyment_Diagram](docs/img/Deployment_Diagram_Team_18.png)
 
 The manual Raspberry Pi does not fly a physical drone. It controls a simulated
 manual drone session, normally identified as `drone-rpi-001`, through the control
