@@ -56,6 +56,7 @@ docs/
   component-contracts.md
   dashboard-demo.md
   diagrams/
+  Specification_Document/
 tests/
   Automated tests for core logic, routes, zones, simulator behavior, and lifecycle
 ```
