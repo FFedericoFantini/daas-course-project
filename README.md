@@ -58,7 +58,7 @@ docs/
   architecture.md
   component-contracts.md
   dashboard-demo.md
-  diagrams/
+  img/
   Specification_Document/
 tests/
   Automated tests for core logic, routes, zones, simulator behavior, and lifecycle
@@ -489,5 +489,4 @@ If old missions appear after a restart:
 - [Architecture notes](docs/architecture.md)
 - [Component contracts](docs/component-contracts.md)
 - [Dashboard demo notes](docs/dashboard-demo.md)
-- [Deployment diagram image](docs/img/Deployment_Diagram_Team_18.png)
 - [Specification document PDF](docs/Specification_Document/Team_18__Spec_V3.pdf)
