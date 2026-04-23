@@ -283,12 +283,13 @@ python apps/control_gateway/manual-drone-controller.py
 Joystick behavior:
 
 - `up`: increase throttle and speed.
-- `down`: decrease throttle and speed.
+- `down`: stops drone.
 - `left`: turn left.
 - `right`: turn right.
 
 The LED matrix displays an arrow corresponding to the last joystick direction.
 The simulator clamps manual speed and vertical speed to safe configured limits.
+Due to joystick movement limitations, turning is performed in fixed increments of 40 degrees, while directional and speed changes are applied instantly.
 
 ## Recommended Startup Order
 
